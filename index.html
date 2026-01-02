@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Workflow YAML Fixer Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #edf2f7;
+            border-bottom: 2px solid #cbd5e0;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            background: #f7fafc;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .error-input-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+        }
+
+        .error-input-section h3 {
+            color: #c53030;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #fc8181;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            background: white;
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .editor-container {
+            position: relative;
+            flex: 1;
+            min-height: 400px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 13px;
+            resize: vertical;
+            background: #f7fafc;
+            line-height: 1.6;
+        }
+        
+        textarea:focus, .error-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+        
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: #edf2f7;
+            border: 2px solid #e2e8f0;
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            padding: 15px 0;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #a0aec0;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .line-numbers span {
+            display: block;
+            padding-right: 10px;
+            line-height: 1.6;
+        }
+        
+        .line-numbers + textarea {
+            padding-left: 55px;
+        }
+        
+        .controls {
+            padding: 0 0 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-fix {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+            justify-content: center;
+            min-width: 150px;
+        }
+        
+        .btn-fix:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-copy {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-copy:hover {
+            background: #38a169;
+        }
+        
+        .btn-download {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-download:hover {
+            background: #3182ce;
+        }
+
+        .btn-generate {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-generate:hover {
+            background: #dd6b20;
+        }
+        
+        .btn-template {
+            background: #9f7aea;
+            color: white;
+        }
+
+        .btn-template:hover {
+            background: #805ad5;
+        }
+
+        .btn-validate {
+            background: #38b2ac;
+            color: white;
+        }
+
+        .btn-validate:hover {
+            background: #319795;
+        }
+
+        .btn-visualize {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-visualize:hover {
+            background: #c53030;
+        }
+        
+        .debug-panel {
+            margin: 20px 0;
+            padding: 20px;
+            background: #faf5ff;
+            border: 2px solid #d6bcfa;
+            border-radius: 8px;
+        }
+
+        .debug-panel h3 {
+            color: #6b46c1;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .debug-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-left: 4px solid #9f7aea;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .debug-item strong {
+            color: #6b46c1;
+        }
+
+        .debug-item.warning {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .debug-item.error {
+            border-left-color: #fc8181;
+            background: #fff5f5;
+        }
+
+        .debug-item.success {
+            border-left-color: #68d391;
+            background: #f0fff4;
+        }
+        
+        .errors {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .errors.show {
+            display: block;
+        }
+        
+        .errors h3 {
+            color: #c53030;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .errors ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .errors li {
+            padding: 5px 0;
+            color: #742a2a;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .success {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0fff4;
+            border: 2px solid #68d391;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .success.show {
+            display: block;
+        }
+        
+        .success h3 {
+            color: #276749;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .validation-panel {
+            margin: 20px 0;
+            padding: 20px;
+            background: #ebf8ff;
+            border: 2px solid #90cdf4;
+            border-radius: 8px;
+        }
+
+        .validation-panel h3 {
+            color: #2b6cb0;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .validation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .validation-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+        }
+
+        .validation-item.warning .validation-icon {
+            color: #ed8936;
+        }
+
+        .validation-item.error .validation-icon {
+            color: #fc8181;
+        }
+
+        .validation-item.info .validation-icon {
+            color: #4299e1;
+        }
+
+        .validation-item.success .validation-icon {
+            color: #68d391;
+        }
+        
+        .stats {
+            padding: 20px 30px;
+            background: #edf2f7;
+            border-top: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .dependency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .dependency-card {
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .dependency-card h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dependency-card pre {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .template-card {
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .template-card h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .template-card p {
+            color: #718096;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .template-card .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .template-tag {
+            padding: 3px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .workflow-preview {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .workflow-preview h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .workflow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .job-node {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .job-node h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .job-node .steps {
+            font-size: 12px;
+            color: #718096;
+            text-align: left;
+        }
+
+        .job-node .steps li {
+            padding: 3px 0;
+            list-style: none;
+        }
+
+        .job-node .steps li::before {
+            content: "→ ";
+            color: #a0aec0;
+        }
+
+        .connector {
+            width: 2px;
+            height: 30px;
+            background: #667eea;
+        }
+
+        .horizontal-connector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .horizontal-connector .line {
+            height: 2px;
+            background: #667eea;
+            flex: 1;
+            min-width: 50px;
+        }
+
+        .parallel-jobs {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .needs-badge {
+            font-size: 10px;
+            background: #ed8936;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #2d3748;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .import-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+        }
+
+        .import-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+        }
+
+        .file-drop {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-drop:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .file-drop.dragover {
+            border-color: #667eea;
+            background: #ebf4ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .history-list {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            padding: 10px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item .filename {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .history-item .timestamp {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+        
+        @media (max-width: 768px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+
+            .dependency-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .template-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .parallel-jobs {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GitHub Workflow YAML Fixer Pro</h1>
+            <p>Advanced error detection, debugging, validation, and dependency generation</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('fixer')">YAML Fixer</button>
+            <button class="tab" onclick="switchTab('validation')">Validation</button>
+            <button class="tab" onclick="switchTab('dependencies')">Dependencies</button>
+            <button class="tab" onclick="switchTab('templates')">Templates</button>
+            <button class="tab" onclick="switchTab('visualize')">Workflow Preview</button>
+        </div>
+
+        <!-- YAML Fixer Tab -->
+        <div id="fixer-tab" class="tab-content active">
+            <div class="error-input-section">
+                <h3>
+                    Paste GitHub Actions Error Message (Optional)
+                </h3>
+                <textarea id="errorMessage" class="error-input" placeholder="Example: &quot;Unexpected value on line 12&quot; or &quot;mapping values are not allowed here&quot;"></textarea>
+            </div>
+
+            <div class="errors" id="errors">
+                <h3>Detected Issues</h3>
+                <ul id="errorList"></ul>
+            </div>
+
+            <div class="success" id="success">
+                <h3>YAML Fixed Successfully!</h3>
+                <p id="successMessage">All issues have been resolved.</p>
+            </div>
+
+            <div class="debug-panel" id="debugPanel" style="display: none;">
+                <h3>Debug Analysis</h3>
+                <div id="debugContent"></div>
+            </div>
+
+            <div class="import-section">
+                <h3>Import YAML Files</h3>
+                <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+                    <p style="color: #718096;">Click to upload or drag and drop YAML files</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".yml,.yaml" multiple onchange="handleFileUpload(event)">
+                </div>
+                <div class="history-list" id="fileHistory"></div>
+            </div>
+            
+            <div class="main">
+                <div class="panel">
+                    <h2>Original YAML</h2>
+                    <div class="editor-container">
+                        <div class="line-numbers" id="inputLineNumbers"></div>
+                        <textarea id="input" placeholder="Paste your GitHub workflow YAML here..." oninput="updateLineNumbers('input', 'inputLineNumbers')"></textarea>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2>Fixed YAML</h2>
+                    <div class="editor-container">
+                        <div class="line-numbers" id="outputLineNumbers"></div>
+                        <textarea id="output" readonly placeholder="Fixed YAML will appear here..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-fix" onclick="fixYAML()">
+                    Fix YAML
+                </button>
+                <button class="btn-copy" onclick="copyOutput()">
+                    Copy Fixed
+                </button>
+                <button class="btn-download" onclick="downloadYAML()">
+                    Download
+                </button>
+            </div>
+        </div>
+
+        <!-- Validation Tab -->
+        <div id="validation-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">YAML Validation & Best Practices</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">Comprehensive validation of your GitHub Actions workflow with actionable recommendations.</p>
+
+            <div class="controls">
+                <button class="btn-validate" onclick="validateYAML()">
+                    Validate YAML
+                </button>
+                <button class="btn-fix" onclick="fixAllIssues()">
+                    Auto-Fix All Issues
+                </button>
+            </div>
+
+            <div class="validation-panel" id="validationPanel" style="display: none;">
+                <h3>Validation Results</h3>
+                <div id="validationContent"></div>
+            </div>
+
+            <div class="debug-panel" id="validationDebugPanel" style="display: none;">
+                <h3>Recommendations</h3>
+                <div id="validationDebugContent"></div>
+            </div>
+        </div>
+
+        <!-- Dependencies Tab -->
+        <div id="dependencies-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">Generate Dependency Files from YAML</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">Automatically extract and generate dependency files based on your workflow requirements.</p>
+            
+            <div class="controls">
+                <button class="btn-generate" onclick="generateDependencies()">
+                    Generate All Dependencies
+                </button>
+                <button class="btn-copy" onclick="downloadAllDependencies()">
+                    Download All
+                </button>
+            </div>
+
+            <div class="dependency-grid" id="dependencyGrid">
+                <div class="dependency-card">
+                    <h3>No dependencies detected yet</h3>
+                    <p style="color: #718096; font-size: 14px;">Add your YAML in the Fixer tab and click &quot;Generate All Dependencies&quot;</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Tab -->
+        <div id="templates-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">Workflow Templates</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">Quick-start templates for common GitHub Actions workflows.</p>
+
+            <div class="template-grid" id="templateGrid">
+                <div class="template-card" onclick="applyTemplate('nodejs')">
+                    <h3>Node.js CI</h3>
+                    <p>Continuous integration for Node.js projects with testing and linting.</p>
+                    <div class="tags">
+                        <span class="template-tag">Node.js</span>
+                        <span class="template-tag">CI</span>
+                        <span class="template-tag">Testing</span>
+                    </div>
+                </div>
+
+                <div class="template-card" onclick="applyTemplate('python')">
+                    <h3>Python CI</h3>
+                    <p>Continuous integration for Python projects with pytest and coverage.</p>
+                    <div class="tags">
+                        <span class="template-tag">Python</span>
+                        <span class="template-tag">CI</span>
+                        <span class="template-tag">Pytest</span>
+                    </div>
+                </div>
+
+                <div class="template-card" onclick="applyTemplate('docker')">
+                    <h3>Docker Build & Push</h3>
+                    <p>Build and push Docker images to GitHub Container Registry.</p>
+                    <div class="tags">
+                        <span class="template-tag">Docker</span>
+                        <span class="template-tag">Registry</span>
+                        <span class="template-tag">Build</span>
+                    </div>
+                </div>
+
+                <div class="template-card" onclick="applyTemplate('deploy')">
+                    <h3>Deploy to AWS</h3>
+                    <p>Deploy applications to AWS Elastic Beanstalk with S3 upload.</p>
+                    <div class="tags">
+                        <span class="template-tag">AWS</span>
+                        <span class="template-tag">Deploy</span>
+                        <span class="template-tag">Cloud</span>
+                    </div>
+                </div>
+
+                <div class="template-card" onclick="applyTemplate('security')">
+                    <h3>Security Scan</h3>
+                    <p>Automated security scanning with dependency and code analysis.</p>
+                    <div class="tags">
+                        <span class="template-tag">Security</span>
+                        <span class="template-tag">SAST</span>
+                        <span class="template-tag">Audit</span>
+                    </div>
+                </div>
+
+                <div class="template-card" onclick="applyTemplate('multi')">
+                    <h3>Multi-Stage Pipeline</h3>
+                    <p>Complete CI/CD pipeline with build, test, and deploy stages.</p>
+                    <div class="tags">
+                        <span class="template-tag">CI/CD</span>
+                        <span class="template-tag">Multi-Stage</span>
+                        <span class="template-tag">Complete</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Tab -->
+        <div id="visualize-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">Workflow Preview</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">Visual representation of your GitHub Actions workflow structure.</p>
+
+            <div class="controls">
+                <button class="btn-visualize" onclick="visualizeWorkflow()">
+                    Generate Diagram
+                </button>
+            </div>
+
+            <div class="workflow-preview" id="workflowPreview" style="display: none;">
+                <h3>Workflow Structure</h3>
+                <div class="workflow-diagram" id="workflowDiagram"></div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="jobCount">0</div>
+                <div class="stat-label">Jobs Found</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fixedCount">0</div>
+                <div class="stat-label">Issues Fixed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="lineCount">0</div>
+                <div class="stat-label">Total Lines</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="depCount">0</div>
+                <div class="stat-label">Dependencies</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="warningCount">0</div>
+                <div class="stat-label">Warnings</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing generated files -->
+    <div class="modal" id="fileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Generated File</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <pre id="modalContent" style="background: #f7fafc; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto;"></pre>
+            <div class="controls" style="margin-top: 20px;">
+                <button class="btn-copy" onclick="copyModalContent()">Copy Content</button>
+                <button class="btn-download" onclick="downloadModalContent()">Download File</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentYAML = '';
+        let fileHistory = [];
+        let validationResults = [];
+        let dependencyFiles = {};
+
+        // Initialize line numbers
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLineNumbers('input', 'inputLineNumbers');
+        });
+
+        function switchTab(tabName) {
+            var tabs = document.querySelectorAll('.tab');
+            var contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            contents.forEach(function(c) { c.classList.remove('active'); });
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        function updateLineNumbers(inputId, lineNumbersId) {
+            var textarea = document.getElementById(inputId);
+            var lineNumbers = document.getElementById(lineNumbersId);
+            var lines = textarea.value.split('\n').length;
+            
+            lineNumbers.innerHTML = '';
+            for (var i = 1; i <= lines; i++) {
+                var span = document.createElement('span');
+                span.textContent = i;
+                lineNumbers.appendChild(span);
+            }
+        }
+
+        function parseGitHubError(errorMsg) {
+            var patterns = [
+                /line[:\s]+(\d+)/i,
+                /col[:\s]+(\d+)/i,
+                /unexpected value[:\s]+['"]([^'"]+)['"]/i,
+                /expected[:\s]+['"]([^'"]+)['"]/i,
+                /invalid[:\s]+['"]([^'"]+)['"]/i,
+                /mapping values are not allowed here/i,
+                /could not find expected ':'/i,
+                /did not find expected key/i,
+                /duplicate key/i
+            ];
+
+            var result = {
+                line: null,
+                column: null,
+                unexpectedValue: null,
+                expectedValue: null,
+                errorType: null
+            };
+
+            patterns.forEach(function(pattern, i) {
+                var match = errorMsg.match(pattern);
+                if (match) {
+                    if (i === 0) result.line = parseInt(match[1]);
+                    else if (i === 1) result.column = parseInt(match[1]);
+                    else if (i === 2) result.unexpectedValue = match[1];
+                    else if (i === 3) result.expectedValue = match[1];
+                    else if (i === 4) result.unexpectedValue = match[1];
+                    else if (i >= 5) result.errorType = pattern.source;
+                }
+            });
+
+            // Detect common error patterns
+            if (errorMsg.includes('mapping values are not allowed')) {
+                result.errorType = 'mapping_error';
+            } else if (errorMsg.includes('could not find expected')) {
+                result.errorType = 'colon_expected';
+            } else if (errorMsg.includes('duplicate key')) {
+                result.errorType = 'duplicate_key';
+            }
+
+            return result;
+        }
+
+        function fixYAML() {
+            var input = document.getElementById('input').value;
+            var errorMessage = document.getElementById('errorMessage').value;
+            var errorList = document.getElementById('errorList');
+            var errorsDiv = document.getElementById('errors');
+            var successDiv = document.getElementById('success');
+            var debugPanel = document.getElementById('debugPanel');
+            var debugContent = document.getElementById('debugContent');
+            
+            errorList.innerHTML = '';
+            errorsDiv.classList.remove('show');
+            successDiv.classList.remove('show');
+            debugPanel.style.display = 'none';
+            debugContent.innerHTML = '';
+            
+            if (!input.trim()) {
+                alert('Please paste your YAML content first!');
+                return;
+            }
+
+            currentYAML = input;
+            
+            var fixed = input;
+            var issues = [];
+            var fixedCount = 0;
+            var debugInfo = [];
+
+            // Parse GitHub error if provided
+            var errorContext = null;
+            if (errorMessage.trim()) {
+                errorContext = parseGitHubError(errorMessage);
+                debugInfo.push('Parsed error: Line ' + (errorContext.line || 'unknown') + ', Type: ' + (errorContext.errorType || 'unknown'));
+                if (errorContext.unexpectedValue) {
+                    debugInfo.push('Unexpected value: "' + errorContext.unexpectedValue + '"');
+                }
+            }
+
+            var lines = fixed.split('\n');
+            var fixedLines = [];
+            var inJobs = false;
+            var jobCount = 0;
+            var currentSection = '';
+            var seenKeys = new Set();
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                var trimmed = line.trim();
+                var indent = line.length - line.trimStart().length;
+                
+                // Track sections
+                if (trimmed.match(/^(name|on|env|jobs|permissions|concurrency):/)) {
+                    currentSection = trimmed.split(':')[0];
+                    debugInfo.push('Found section: ' + currentSection + ' at line ' + (i + 1));
+                }
+                
+                // Detect jobs section
+                if (trimmed === 'jobs:') {
+                    inJobs = true;
+                    fixedLines.push(line);
+                    continue;
+                }
+
+                // Check for duplicate keys
+                if (trimmed.includes(':') && !trimmed.startsWith('#')) {
+                    var key = trimmed.split(':')[0].trim();
+                    if (seenKeys.has(key) && indent === 2) {
+                        debugInfo.push('Line ' + (i + 1) + ': Found duplicate key "' + key + '"');
+                    }
+                    seenKeys.add(key);
+                }
+                
+                // Fix job names
+                if (inJobs && trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('-')) {
+                    if (trimmed.match(/^[a-z][a-z0-9-_]*:$/i)) {
+                        if (indent !== 2) {
+                            var msg = 'Line ' + (i + 1) + ': "' + trimmed + '" - fixed indentation from ' + indent + ' to 2 spaces';
+                            issues.push(msg);
+                            debugInfo.push(msg);
+                            fixedLines.push('  ' + trimmed);
+                            fixedCount++;
+                        } else {
+                            fixedLines.push(line);
+                        }
+                        jobCount++;
+                        continue;
+                    }
+                }
+
+                // Fix runs-on indentation
+                if (trimmed.startsWith('runs-on:') && indent !== 4) {
+                    fixedLines.push('    ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed runs-on indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix steps indentation
+                if (trimmed.startsWith('steps:') && indent !== 4) {
+                    fixedLines.push('    ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed steps indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix uses indentation
+                if (trimmed.startsWith('uses:') && indent !== 6) {
+                    fixedLines.push('      ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed uses indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix run indentation
+                if (trimmed.startsWith('run:') && indent !== 6) {
+                    fixedLines.push('      ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed run indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix needs indentation
+                if (trimmed.startsWith('needs:') && indent !== 4) {
+                    fixedLines.push('    ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed needs indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix if indentation
+                if (trimmed.startsWith('if:') && indent !== 4) {
+                    fixedLines.push('    ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed if indentation');
+                    fixedCount++;
+                    continue;
+                }
+
+                // Fix env indentation
+                if (trimmed.startsWith('env:') && indent !== 4) {
+                    fixedLines.push('    ' + trimmed);
+                    issues.push('Line ' + (i + 1) + ': Fixed env indentation');
+                    fixedCount++;
+                    continue;
+                }
+                
+                fixedLines.push(line);
+            }
+            
+            fixed = fixedLines.join('\n');
+            
+            // Display results
+            document.getElementById('output').value = fixed;
+            document.getElementById('jobCount').textContent = jobCount;
+            document.getElementById('fixedCount').textContent = fixedCount;
+            document.getElementById('lineCount').textContent = lines.length;
+            
+            // Show debug info
+            if (debugInfo.length > 0) {
+                debugPanel.style.display = 'block';
+                debugInfo.forEach(function(info) {
+                    var div = document.createElement('div');
+                    div.className = 'debug-item';
+                    div.innerHTML = '<strong>&#8594;</strong> ' + info;
+                    debugContent.appendChild(div);
+                });
+            }
+            
+            if (fixedCount > 0) {
+                issues.forEach(function(issue) {
+                    var li = document.createElement('li');
+                    li.textContent = '- ' + issue;
+                    errorList.appendChild(li);
+                });
+                errorsDiv.classList.add('show');
+                successDiv.classList.add('show');
+                document.getElementById('successMessage').textContent = 'Fixed ' + fixedCount + ' issue' + (fixedCount > 1 ? 's' : '') + ' in your YAML file.';
+            } else if (jobCount > 0) {
+                successDiv.classList.add('show');
+                document.getElementById('successMessage').textContent = 'No issues detected! Your YAML looks good.';
+            } else {
+                alert('No job definitions found. Make sure you pasted the complete YAML file.');
+            }
+        }
+
+        function validateYAML() {
+            var yaml = document.getElementById('input').value || currentYAML;
+            
+            if (!yaml.trim()) {
+                alert('Please add your YAML first!');
+                return;
+            }
+
+            var validationPanel = document.getElementById('validationPanel');
+            var validationContent = document.getElementById('validationContent');
+            var debugPanel = document.getElementById('validationDebugPanel');
+            var debugContent = document.getElementById('validationDebugContent');
+            
+            validationPanel.style.display = 'block';
+            debugPanel.style.display = 'block';
+            validationContent.innerHTML = '';
+            debugContent.innerHTML = '';
+            
+            validationResults = [];
+            var warnings = 0;
+            var errors = 0;
+            var infoCount = 0;
+
+            var lines = yaml.split('\n');
+            var jobs = {};
+            var currentJob = null;
+            var hasName = false;
+            var hasOn = false;
+            var hasJobs = false;
+            var actionsUsed = [];
+            var actionVersions = {};
+
+            // Parse YAML
+            lines.forEach(function(line, i) {
+                var trimmed = line.trim();
+                var lineNum = i + 1;
+
+                // Check for name field
+                if (trimmed.startsWith('name:')) {
+                    hasName = true;
+                    var name = trimmed.split('name:')[1].trim();
+                    if (!name) {
+                        validationResults.push({ type: 'warning', line: lineNum, message: 'Workflow name is empty' });
+                        warnings++;
+                    }
+                }
+
+                // Check for on trigger
+                if (trimmed.startsWith('on:')) {
+                    hasOn = true;
+                }
+
+                // Check for push trigger
+                if (trimmed.includes('push:') && trimmed.includes('branches:')) {
+                    var branches = trimmed.match(/branches:\s*\[([^\]]+)\]/);
+                    if (branches && branches[1].includes('main') && !branches[1].includes('master')) {
+                        validationResults.push({ type: 'info', line: lineNum, message: 'Consider adding "master" branch for compatibility' });
+                        infoCount++;
+                    }
+                }
+
+                // Check for jobs section
+                if (trimmed === 'jobs:') {
+                    hasJobs = true;
+                }
+
+                // Track jobs
+                if (indent === 2 && trimmed.match(/^[a-z][a-z0-9-_]*:$/) && line.match(/^  [a-z]/)) {
+                    currentJob = trimmed.replace(':', '');
+                    jobs[currentJob] = { line: lineNum, needs: null, runsOn: null };
+                }
+
+                var indent = line.length - line.trimStart().length;
+                
+                // Track jobs
+                if (indent === 2 && trimmed.match(/^[a-z][a-z0-9-_]*:$/)) {
+                    currentJob = trimmed.replace(':', '');
+                    jobs[currentJob] = { line: lineNum, needs: null, runsOn: null };
+                }
+
+                // Check needs
+                if (trimmed.startsWith('needs:') && currentJob) {
+                    var neededJob = trimmed.split('needs:')[1].trim();
+                    jobs[currentJob].needs = neededJob;
+                    if (!jobs[neededJob]) {
+                        validationResults.push({ type: 'error', line: lineNum, message: 'Job "' + currentJob + '" depends on non-existent job "' + neededJob + '"' });
+                        errors++;
+                    }
+                }
+
+                // Check runs-on
+                if (trimmed.startsWith('runs-on:') && currentJob) {
+                    var runsOn = trimmed.split('runs-on:')[1].trim();
+                    jobs[currentJob].runsOn = runsOn;
+                    if (runsOn === 'ubuntu-latest') {
+                        validationResults.push({ type: 'info', line: lineNum, message: 'Consider pinning to specific version (e.g., ubuntu-22.04) for reproducibility' });
+                        infoCount++;
+                    }
+                }
+
+                // Extract actions
+                var usesMatch = trimmed.match(/uses:\s*([^\s@]+)@([^\s]+)/);
+                if (usesMatch) {
+                    var action = usesMatch[1];
+                    var version = usesMatch[2];
+                    actionsUsed.push({ action: action, version: version, line: lineNum });
+                    
+                    // Track version patterns
+                    if (!actionVersions[action]) {
+                        actionVersions[action] = new Set();
+                    }
+                    actionVersions[action].add(version);
+
+                    // Check for deprecated versions
+                    if (version === 'v1' || version === 'v2') {
+                        validationResults.push({ type: 'warning', line: lineNum, message: 'Action "' + action + '" is using ' + version + ' - consider upgrading to latest version' });
+                        warnings++;
+                    }
+
+                    // Check for unpinned versions
+                    if (version === 'main' || version === 'master') {
+                        validationResults.push({ type: 'warning', line: lineNum, message: 'Action "' + action + '" is not pinned to a specific version - this may cause issues when the action is updated' });
+                        warnings++;
+                    }
+                }
+
+                // Check for run steps
+                if (trimmed.startsWith('run:')) {
+                    var runContent = trimmed.substring(4).trim();
+                    if (runContent.includes('${{ secrets.')) {
+                        var secretMatch = runContent.match(/\${{ secrets\.([A-Z_]+) }}/g);
+                        if (secretMatch) {
+                            secretMatch.forEach(function(secret) {
+                                var secretName = secret.match(/secrets\.([A-Z_]+)/)[1];
+                                validationResults.push({ type: 'info', line: lineNum, message: 'Secret "' + secretName + '" is used in run command - ensure it is properly configured' });
+                                infoCount++;
+                            });
+                        }
+                    }
+                }
+            });
+
+            // Overall checks
+            if (!hasName) {
+                validationResults.push({ type: 'warning', message: 'Workflow is missing a name field' });
+                warnings++;
+            }
+
+            if (!hasOn) {
+                validationResults.push({ type: 'error', message: 'Workflow is missing "on" trigger field' });
+                errors++;
+            }
+
+            if (!hasJobs) {
+                validationResults.push({ type: 'error', message: 'Workflow is missing "jobs" section' });
+                errors++;
+            }
+
+            // Check for concurrency
+            var hasConcurrency = yaml.includes('concurrency:');
+            if (!hasConcurrency) {
+                validationResults.push({ type: 'info', message: 'Consider adding "concurrency" to prevent multiple workflow runs' });
+                infoCount++;
+            }
+
+            // Check for permissions
+            var hasPermissions = yaml.includes('permissions:');
+            if (!hasPermissions) {
+                validationResults.push({ type: 'info', message: 'Consider adding explicit "permissions" for security best practices' });
+                infoCount++;
+            }
+
+            // Display validation results
+            var typeIcons = {
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️',
+                success: '✅'
+            };
+
+            if (validationResults.length === 0) {
+                var div = document.createElement('div');
+                div.className = 'validation-item success';
+                div.innerHTML = '<strong>' + typeIcons.success + '</strong> <div><strong>Perfect!</strong> Your workflow passed all validation checks.</div>';
+                validationContent.appendChild(div);
+            } else {
+                validationResults.forEach(function(result) {
+                    var div = document.createElement('div');
+                    div.className = 'validation-item ' + result.type;
+                    var lineInfo = result.line ? ' (Line ' + result.line + ')' : '';
+                    div.innerHTML = '<strong>' + typeIcons[result.type] + '</strong> <div>' + result.message + lineInfo + '</div>';
+                    validationContent.appendChild(div);
+                });
+            }
+
+            // Generate recommendations
+            var recommendations = [
+                { icon: '💡', text: 'Always pin actions to specific versions (e.g., @v4.1.0) instead of @main for production workflows' },
+                { icon: '🔒', text: 'Use explicit permissions instead of read-all/write-all for better security' },
+                { icon: '⏱️', text: 'Set concurrency groups to cancel redundant workflow runs on the same branch' },
+                { icon: '🧪', text: 'Include timeout-minutes on jobs to prevent runaway workflows' },
+                { icon: '📊', text: 'Use conditions (if) to skip unnecessary workflow runs' }
+            ];
+
+            recommendations.forEach(function(rec) {
+                var div = document.createElement('div');
+                div.className = 'debug-item';
+                div.innerHTML = '<strong>' + rec.icon + '</strong> ' + rec.text;
+                debugContent.appendChild(div);
+            });
+
+            document.getElementById('warningCount').textContent = warnings;
+        }
+
+        function fixAllIssues() {
+            // Apply fixes based on validation results
+            var yaml = document.getElementById('input').value || currentYAML;
+            
+            // Fix common issues
+            if (!yaml.includes('permissions:')) {
+                yaml = yaml.replace(/^(jobs:)/m, 'permissions:\n  contents: read\n  actions: read\n  checks: read\n  deployments: read\n  id-token: read\n  issues: read\n  discussions: read\n  packages: read\n  pull-requests: read\n  repository-projects: read\n  security-events: read\n  statuses: read\n\n$1');
+            }
+
+            if (!yaml.includes('concurrency:')) {
+                yaml = yaml.replace(/^(on:)/m, 'concurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\n$1');
+            }
+
+            // Replace ubuntu-latest with pinned version
+            yaml = yaml.replace(/runs-on:\s*ubuntu-latest/g, 'runs-on: ubuntu-22.04');
+
+            // Update deprecated action versions (simple replacements)
+            yaml = yaml.replace(/actions\/checkout@v1/g, 'actions/checkout@v4');
+            yaml = yaml.replace(/actions\/checkout@v2/g, 'actions/checkout@v4');
+            yaml = yaml.replace(/actions\/setup-node@v1/g, 'actions/setup-node@v4');
+            yaml = yaml.replace(/actions\/setup-node@v2/g, 'actions/setup-node@v4');
+
+            document.getElementById('input').value = yaml;
+            updateLineNumbers('input', 'inputLineNumbers');
+            document.getElementById('lineCount').textContent = yaml.split('\n').length;
+
+            alert('Common issues have been fixed! Review the changes and click "Fix YAML" for indentation fixes.');
+        }
+
+        function generateDependencies() {
+            var yaml = document.getElementById('input').value || currentYAML;
+            
+            if (!yaml.trim()) {
+                alert('Please add your YAML in the Fixer tab first!');
+                return;
+            }
+
+            var grid = document.getElementById('dependencyGrid');
+            grid.innerHTML = '';
+
+            dependencyFiles = {};
+
+            var deps = {
+                python: new Set(),
+                node: new Set(),
+                docker: [],
+                system: new Set(),
+                maven: [],
+                gradle: [],
+                go: [],
+                ruby: []
+            };
+
+            var depCount = 0;
+
+            // Parse YAML for dependencies
+            var lines = yaml.split('\n');
+            lines.forEach(function(line) {
+                var trimmed = line.trim();
+                
+                // Python dependencies
+                if (trimmed.includes('pip install')) {
+                    var match = trimmed.match(/pip install\s+(-[a-z]+\s+)*([^\s&|]+)/);
+                    if (match) {
+                        var packages = match[2].split(/\s+/);
+                        packages.forEach(function(pkg) {
+                            if (pkg && !pkg.startsWith('-') && !pkg.startsWith('${{')) {
+                                deps.python.add(pkg.replace(/[<>=!^~]/g, ''));
+                            }
+                        });
+                    }
+                }
+
+                // Python requirements.txt style
+                if (trimmed.includes('requirements') && trimmed.includes('.txt')) {
+                    deps.python.add('(from requirements.txt)');
+                }
+
+                // Node dependencies
+                if (trimmed.includes('npm install') || trimmed.includes('yarn add')) {
+                    var match = trimmed.match(/(?:npm|yarn) install\s+(?:--save-dev\s+|--save\s+)*([^\s&|]+)/);
+                    if (match) {
+                        var packages = match[1].split(/\s+/);
+                        packages.forEach(function(pkg) {
+                            if (pkg && !pkg.startsWith('-') && !pkg.startsWith('^') && !pkg.startsWith('${{')) {
+                                deps.node.add(pkg.replace(/[@^~]/g, ''));
+                            }
+                        });
+                    }
+                }
+
+                // Package.json exists check
+                if (trimmed.includes('package.json')) {
+                    deps.node.add('(from package.json)');
+                }
+
+                // Docker services
+                if ((trimmed.includes('docker run') || trimmed.includes('image:')) && !trimmed.includes('#')) {
+                    var imageMatch = trimmed.match(/(?:image:|docker run\s+)([a-z0-9\-_\/:.]+)/i);
+                    if (imageMatch && !imageMatch[1].includes('${{')) {
+                        deps.docker.push(imageMatch[1]);
+                    }
+                }
+
+                // Docker Compose
+                if (trimmed.includes('docker-compose')) {
+                    deps.docker.push('(docker-compose.yml detected)');
+                }
+
+                // System packages
+                if (trimmed.includes('apt-get install') || trimmed.includes('apt install') || trimmed.includes('yum install')) {
+                    var match = trimmed.match(/apt(?:-get)?\s+install\s+([^\s&|]+)/);
+                    if (match) {
+                        var packages = match[1].split(/\s+/);
+                        packages.forEach(function(pkg) {
+                            if (pkg && !pkg.startsWith('-')) {
+                                deps.system.add(pkg);
+                            }
+                        });
+                    }
+                }
+
+                // Maven
+                if (trimmed.includes('mvn') || trimmed.includes('pom.xml')) {
+                    if (trimmed.includes('mvn')) {
+                        var mvnMatch = trimmed.match(/mvn\s+([^\s]+)/);
+                        if (mvnMatch && (mvnMatch[1].includes('dependency:') || mvnMatch[1].includes('package'))) {
+                            deps.maven.push('(maven detected)');
+                        }
+                    }
+                    deps.maven.push('(pom.xml referenced)');
+                }
+
+                // Gradle
+                if (trimmed.includes('gradle') || trimmed.includes('build.gradle')) {
+                    deps.gradle.push('(build.gradle referenced)');
+                }
+
+                // Go modules
+                if (trimmed.includes('go mod') || trimmed.includes('go.mod')) {
+                    deps.go.push('(go.mod detected)');
+                }
+
+                // Ruby
+                if (trimmed.includes('bundle') || trimmed.includes('Gemfile')) {
+                    deps.ruby.push('(Gemfile detected)');
+                }
+            });
+
+            // Generate requirements.txt
+            if (deps.python.size > 0) {
+                depCount++;
+                var content = Array.from(deps.python).join('\n');
+                dependencyFiles['requirements.txt'] = content;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>requirements.txt</h3><pre>' + content + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'requirements.txt\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'requirements.txt\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate package.json
+            if (deps.node.size > 0) {
+                depCount++;
+                var pkg = {
+                    name: 'github-workflow-project',
+                    version: '1.0.0',
+                    description: 'Generated from GitHub Actions workflow',
+                    dependencies: {}
+                };
+                Array.from(deps.node).forEach(function(dep) {
+                    if (!dep.startsWith('(')) {
+                        pkg.dependencies[dep] = '^1.0.0';
+                    }
+                });
+                
+                var content = JSON.stringify(pkg, null, 2);
+                dependencyFiles['package.json'] = content;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>package.json</h3><pre>' + content + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'package.json\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'package.json\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate docker-compose.yml
+            if (deps.docker.length > 0) {
+                depCount++;
+                var compose = 'version: "3.8"\nservices:\n';
+                deps.docker.forEach(function(img, i) {
+                    if (!img.includes('(')) {
+                        var serviceName = img.split(':')[0].split('/').pop().replace(/[^a-z0-9]/gi, '_');
+                        compose += '  ' + (serviceName || 'service') + '_' + i + ':\n    image: ' + img + '\n    ports:\n      - "80:80"\n';
+                    } else {
+                        compose += '  # ' + img + '\n';
+                    }
+                });
+                
+                var content = compose;
+                dependencyFiles['docker-compose.yml'] = content;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>docker-compose.yml</h3><pre>' + content + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'docker-compose.yml\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'docker-compose.yml\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate system packages list
+            if (deps.system.size > 0) {
+                depCount++;
+                var content = Array.from(deps.system).join('\n');
+                dependencyFiles['system-packages.txt'] = content;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>System Packages</h3><pre>' + content + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'system-packages.txt\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'system-packages.txt\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate pom.xml (Maven)
+            if (deps.maven.length > 0) {
+                depCount++;
+                var pomContent = '<?xml version="1.0" encoding="UTF-8"?>\n<project xmlns="http://maven.apache.org/POM/4.0.0"\n         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">\n    <modelVersion>4.0.0</modelVersion>\n    \n    <groupId>com.github.actions</groupId>\n    <artifactId>workflow-project</artifactId>\n    <version>1.0.0</version>\n    <packaging>jar</packaging>\n    \n    <properties>\n        <maven.compiler.source>11</maven.compiler.source>\n        <maven.compiler.target>11</maven.compiler.target>\n        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n    </properties>\n    \n    <dependencies>\n        <!-- Add your dependencies here -->\n    </dependencies>\n    \n    <build>\n        <plugins>\n            <plugin>\n                <groupId>org.apache.maven.plugins</groupId>\n                <artifactId>maven-surefire-plugin</artifactId>\n                <version>3.0.0-M9</version>\n            </plugin>\n        </plugins>\n    </build>\n</project>';
+                dependencyFiles['pom.xml'] = pomContent;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>pom.xml (Maven)</h3><pre>' + pomContent + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'pom.xml\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'pom.xml\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate go.mod (Go)
+            if (deps.go.length > 0) {
+                depCount++;
+                var goContent = 'module github.com/actions/workflow-project\n\ngo 1.21\n\nrequire (\n    // Add your dependencies here\n)\n\nrequire (\n    github.com/stretchr/testify v1.8.4 // indirect\n)';
+                dependencyFiles['go.mod'] = goContent;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>go.mod (Go)</h3><pre>' + goContent + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'go.mod\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'go.mod\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            // Generate Gemfile (Ruby)
+            if (deps.ruby.length > 0) {
+                depCount++;
+                var gemfileContent = "source 'https://rubygems.org'\n\nruby '3.2.0'\n\n# Add your dependencies here\ngem 'rake'\ngem 'rspec'";
+                dependencyFiles['Gemfile'] = gemfileContent;
+                
+                var card = document.createElement('div');
+                card.className = 'dependency-card';
+                card.innerHTML = '<h3>Gemfile (Ruby)</h3><pre>' + gemfileContent + '</pre><div class="controls" style="margin-top: 10px;"><button class="btn-copy" onclick="viewDependency(\'Gemfile\')" style="flex: 1;">View</button><button class="btn-download" onclick="downloadDependency(\'Gemfile\')">Download</button></div>';
+                grid.appendChild(card);
+            }
+
+            if (depCount === 0) {
+                grid.innerHTML = '<div class="dependency-card"><h3>No Dependencies Found</h3><p style="color: #718096;">Your workflow does not contain recognizable dependency installation commands.</p><p style="color: #718096; margin-top: 10px; font-size: 12px;">Supported: pip install, npm install, apt-get install, docker images, maven, gradle, go, ruby</p></div>';
+            }
+
+            document.getElementById('depCount').textContent = depCount;
+        }
+
+        function viewDependency(filename) {
+            if (!dependencyFiles[filename]) {
+                alert('Please generate dependencies first!');
+                return;
+            }
+
+            document.getElementById('modalTitle').textContent = filename;
+            document.getElementById('modalContent').textContent = dependencyFiles[filename];
+            document.getElementById('fileModal').classList.add('show');
+        }
+
+        function downloadDependency(filename) {
+            if (!dependencyFiles[filename]) {
+                alert('Please generate dependencies first!');
+                return;
+            }
+
+            var blob = new Blob([dependencyFiles[filename]], { type: 'text/plain' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadAllDependencies() {
+            if (Object.keys(dependencyFiles).length === 0) {
+                alert('Please generate dependencies first!');
+                return;
+            }
+
+            var content = JSON.stringify(dependencyFiles, null, 2);
+            var zip = new Blob([content], { type: 'application/json' });
+            var url = URL.createObjectURL(zip);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'dependencies.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function closeModal() {
+            document.getElementById('fileModal').classList.remove('show');
+        }
+
+        function copyModalContent() {
+            var content = document.getElementById('modalContent').textContent;
+            navigator.clipboard.writeText(content).then(function() {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        function downloadModalContent() {
+            var filename = document.getElementById('modalTitle').textContent;
+            downloadDependency(filename);
+        }
+
+        var templates = {
+            nodejs: 'name: Node.js CI\n\non:\n  push:\n    branches: [main, master]\n  pull_request:\n    branches: [main, master]\n\npermissions:\n  contents: read\n  actions: read\n  checks: read\n  pull-requests: read\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  build:\n    runs-on: ubuntu-22.04\n    strategy:\n      matrix:\n        node-version: [18.x, 20.x, 22.x]\n    \n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v4\n    \n    - name: Setup Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n        cache: npm\n    \n    - name: Install dependencies\n      run: npm ci\n    \n    - name: Run linter\n      run: npm run lint\n    \n    - name: Run tests\n      run: npm test',
+            
+            python: 'name: Python CI\n\non:\n  push:\n    branches: [main, master]\n  pull_request:\n    branches: [main, master]\n\npermissions:\n  contents: read\n  actions: read\n  checks: read\n  pull-requests: read\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  build:\n    runs-on: ubuntu-22.04\n    strategy:\n      matrix:\n        python-version: [3.10, 3.11, 3.12]\n    \n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v4\n    \n    - name: Set up Python ${{ matrix.python-version }}\n      uses: actions/setup-python@v5\n      with:\n        python-version: ${{ matrix.python-version }}\n        cache: pip\n    \n    - name: Install dependencies\n      run: |\n        python -m pip install --upgrade pip\n        pip install -r requirements.txt\n    \n    - name: Run linter\n      run: pip install flake8 && flake8 .\n    \n    - name: Run tests\n      run: |\n        pip install pytest pytest-cov\n        pytest --cov=your_package --cov-report=xml',
+            
+            docker: 'name: Docker Build & Push\n\non:\n  push:\n    branches: [main]\n    tags: [v*]\n  pull_request:\n    branches: [main]\n\npermissions:\n  contents: read\n  packages: write\n  id-token: write\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\nenv:\n  REGISTRY: ghcr.io\n  IMAGE_NAME: ${{ github.repository }}\n\njobs:\n  build:\n    runs-on: ubuntu-22.04\n    outputs:\n      digest: ${{ steps.build.outputs.digest }}\n    \n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v4\n    \n    - name: Set up Docker Buildx\n      uses: docker/setup-buildx-action@v3\n    \n    - name: Log in to Container Registry\n      uses: docker/login-action@v3\n      with:\n        registry: ${{ env.REGISTRY }}\n        username: ${{ github.actor }}\n        password: ${{ secrets.GITHUB_TOKEN }}\n    \n    - name: Extract metadata for Docker\n      id: meta\n      uses: docker/metadata-action@v5\n      with:\n        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\n        tags: |\n          type=raw,value=latest\n          type=sha,prefix=\n          type=ref,event=branch\n          type=ref,event=tag\n          type=raw,value={{branch}}\n          type=raw,value={{commit}}\n    \n    - name: Build and push Docker image\n      id: build\n      uses: docker/build-push-action@v5\n      with:\n        context: .\n        push: ${{ github.event_name != pull_request }}\n        tags: ${{ steps.meta.outputs.tags }}\n        labels: ${{ steps.meta.outputs.labels }}\n        cache-from: type=gha\n        cache-to: type=gha,mode=max',
+            
+            deploy: 'name: Deploy to AWS\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  id-token: write\n  actions: read\n  pull-requests: read\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: false\n\njobs:\n  deploy:\n    runs-on: ubuntu-22.04\n    environment: production\n    \n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v4\n    \n    - name: Configure AWS credentials\n      uses: aws-actions/configure-aws-credentials@v4\n      with:\n        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}\n        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}\n        aws-region: ${{ secrets.AWS_REGION }}\n    \n    - name: Build application\n      run: |\n        npm install\n        npm run build\n    \n    - name: Deploy to S3\n      run: |\n        aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete\n    \n    - name: Invalidate CloudFront\n      if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}\n      run: |\n        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"',
+            
+            security: 'name: Security Scan\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n  schedule:\n    - cron: 0 0 * * 0\n\npermissions:\n  contents: read\n  actions: read\n  security-events: write\n  checks: write\n  pull-requests: read\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  security-analysis:\n    runs-on: ubuntu-22.04\n    permissions:\n      actions: read\n      contents: read\n      security-events: write\n    \n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v4\n    \n    - name: Run Dependency Review\n      uses: actions/dependency-review-action@v4\n      with:\n        comment-summary-in-pr: on-failure\n        fail-on-severity: high\n    \n    - name: Run CodeQL\n      uses: github/codeql-action/analyze@v3\n      with:\n        languages: javascript,python\n        queries: security-extended\n    \n    - name: Run Trivy vulnerability scanner\n      uses: aquasecurity/trivy-action@master\n      with:\n        scan-type: fs\n        scan-ref: .\n        format: sarif\n        output: trivy-results.sarif\n    \n    - name: Upload Trivy results to GitHub Security\n      uses: github/codeql-action/upload-sarif@v3\n      with:\n        sarif_file: trivy-results.sarif',
+            
+            multi: 'name: CI/CD Pipeline\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\npermissions:\n  contents: read\n  actions: read\n  checks: read\n  deployments: write\n  id-token: write\n  issues: write\n  packages: write\n  pull-requests: write\n  repository-projects: write\n  security-events: write\n  statuses: read\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\nenv:\n  NODE_VERSION: 20.x\n\njobs:\n  lint:\n    runs-on: ubuntu-22.04\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v4\n    \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ env.NODE_VERSION }}\n        cache: npm\n    \n    - name: Install dependencies\n      run: npm ci\n    \n    - name: Run linter\n      run: npm run lint\n\n  test:\n    needs: lint\n    runs-on: ubuntu-22.04\n    strategy:\n      matrix:\n        os: [ubuntu-latest, windows-latest, macos-latest]\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v4\n    \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ env.NODE_VERSION }}\n        cache: npm\n    \n    - name: Install dependencies\n      run: npm ci\n    \n    - name: Run tests\n      run: npm test\n\n  build:\n    needs: test\n    runs-on: ubuntu-22.04\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v4\n    \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ env.NODE_VERSION }}\n        cache: npm\n    \n    - name: Install dependencies\n      run: npm ci\n    \n    - name: Build\n      run: npm run build\n    \n    - name: Upload build artifacts\n      uses: actions/upload-artifact@v4\n      with:\n        name: build-output\n        path: dist/\n        retention-days: 7\n\n  deploy:\n    needs: build\n    runs-on: ubuntu-22.04\n    if: github.ref == refs/heads/main\n    environment: production\n    steps:\n    - name: Checkout\n      uses: actions/checkout@v4\n    \n    - name: Download build artifacts\n      uses: actions/download-artifact@v4\n      with:\n        name: build-output\n        path: dist/\n    \n    - name: Deploy to production\n      run: echo "Deploying to production..."'
+        };
+
+        function applyTemplate(templateName) {
+            var template = templates[templateName];
+            if (template) {
+                document.getElementById('input').value = template;
+                updateLineNumbers('input', 'inputLineNumbers');
+                document.getElementById('lineCount').textContent = template.split('\n').length;
+                switchTab('fixer');
+                
+                // Highlight the active tab
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelector('.tab').classList.add('active');
+            }
+        }
+
+        function visualizeWorkflow() {
+            var yaml = document.getElementById('input').value || currentYAML;
+            
+            if (!yaml.trim()) {
+                alert('Please add your YAML first!');
+                return;
+            }
+
+            var preview = document.getElementById('workflowPreview');
+            var diagram = document.getElementById('workflowDiagram');
+            preview.style.display = 'block';
+            diagram.innerHTML = '';
+
+            var lines = yaml.split('\n');
+            var jobs = [];
+            var currentJob = null;
+            var steps = [];
+            var currentStep = '';
+
+            // Parse jobs and steps
+            lines.forEach(function(line, i) {
+                var trimmed = line.trim();
+                var indent = line.length - line.trimStart().length;
+
+                // Detect job name (2 spaces indent)
+                if (indent === 2 && trimmed.match(/^[a-z][a-z0-9-_]*:$/)) {
+                    if (currentJob && steps.length > 0) {
+                        jobs.push({ name: currentJob, steps: steps.slice() });
+                    }
+                    currentJob = trimmed.replace(':', '');
+                    steps = [];
+                }
+
+                // Detect step name (4 spaces indent)
+                if (indent === 4 && trimmed.startsWith('- name:')) {
+                    currentStep = trimmed.replace('- name:', '').trim();
+                }
+
+                // Detect uses step (6 spaces indent)
+                if (indent === 6 && trimmed.startsWith('uses:')) {
+                    var uses = trimmed.replace('uses:', '').trim();
+                    if (currentStep) {
+                        steps.push({ name: currentStep, uses: uses });
+                        currentStep = '';
+                    } else {
+                        steps.push({ name: uses, uses: uses });
+                    }
+                }
+
+                // Detect run step (6 spaces indent)
+                if (indent === 6 && trimmed.startsWith('run:')) {
+                    var run = trimmed.replace('run:', '').trim();
+                    if (currentStep) {
+                        steps.push({ name: currentStep, run: run });
+                        currentStep = '';
+                    } else {
+                        steps.push({ name: run.substring(0, 30), run: run });
+                    }
+                }
+            });
+
+            // Add last job
+            if (currentJob && steps.length > 0) {
+                jobs.push({ name: currentJob, steps: steps.slice() });
+            }
+
+            // Build visualization
+            if (jobs.length === 0) {
+                diagram.innerHTML = '<p style="color: #718096;">No jobs found in the YAML.</p>';
+                return;
+            }
+
+            // Create event node
+            var eventNode = document.createElement('div');
+            eventNode.className = 'job-node';
+            eventNode.innerHTML = '<h4>Trigger</h4><p style="font-size: 12px; color: #718096;">on: push/pull_request</p>';
+            diagram.appendChild(eventNode);
+
+            // Add connector
+            var connector = document.createElement('div');
+            connector.className = 'connector';
+            diagram.appendChild(connector);
+
+            // Create parallel jobs if more than 3
+            if (jobs.length > 3) {
+                var parallelContainer = document.createElement('div');
+                parallelContainer.className = 'parallel-jobs';
+
+                jobs.slice(0, 3).forEach(function(job, i) {
+                    parallelContainer.appendChild(createJobNode(job, i === jobs.length - 1));
+                });
+
+                diagram.appendChild(parallelContainer);
+
+                // Add remaining jobs if any
+                if (jobs.length > 3) {
+                    var connector2 = document.createElement('div');
+                    connector2.className = 'connector';
+                    diagram.appendChild(connector2);
+
+                    var parallelContainer2 = document.createElement('div');
+                    parallelContainer2.className = 'parallel-jobs';
+
+                    jobs.slice(3).forEach(function(job) {
+                        parallelContainer2.appendChild(createJobNode(job, true));
+                    });
+
+                    diagram.appendChild(parallelContainer2);
+                }
+            } else {
+                // Sequential jobs
+                jobs.forEach(function(job, i) {
+                    diagram.appendChild(createJobNode(job, i === jobs.length - 1));
+                    if (i < jobs.length - 1) {
+                        var conn = document.createElement('div');
+                        conn.className = 'connector';
+                        diagram.appendChild(conn);
+                    }
+                });
+            }
+
+            function createJobNode(job, isLast) {
+                var node = document.createElement('div');
+                node.className = 'job-node';
+
+                var stepList = job.steps.slice(0, 4).map(function(s) {
+                    if (s.uses) {
+                        var actionName = s.uses.split('@')[0].split('/').pop();
+                        return '<li title="' + s.uses + '">' + actionName + '</li>';
+                    }
+                    return '<li>' + s.name.substring(0, 20) + '</li>';
+                }).join('');
+
+                var moreSteps = job.steps.length > 4 ? '<li>... +' + (job.steps.length - 4) + ' more</li>' : '';
+
+                node.innerHTML = '<h4>' + job.name + '</h4><ul class="steps">' + stepList + moreSteps + '</ul>' + (isLast ? '<div class="needs-badge">complete</div>' : '<div class="needs-badge">continues</div>');
+
+                return node;
+            }
+        }
+
+        function handleFileUpload(event) {
+            var files = event.target.files;
+            if (!files.length) return;
+
+            Array.from(files).forEach(function(file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var content = e.target.result;
+                    document.getElementById('input').value = content;
+                    updateLineNumbers('input', 'inputLineNumbers');
+                    document.getElementById('lineCount').textContent = content.split('\n').length;
+
+                    // Add to history
+                    var timestamp = new Date().toLocaleString();
+                    fileHistory.push({ name: file.name, timestamp: timestamp, content: content });
+                    updateFileHistory();
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function updateFileHistory() {
+            var historyDiv = document.getElementById('fileHistory');
+            historyDiv.innerHTML = '';
+
+            fileHistory.slice(-5).forEach(function(item, i) {
+                var div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = '<div><span class="filename">' + item.name + '</span><span class="timestamp">' + item.timestamp + '</span></div><button class="btn-copy" onclick="loadFromHistory(' + (fileHistory.length - 5 + i) + ')">Load</button>';
+                historyDiv.appendChild(div);
+            });
+        }
+
+        function loadFromHistory(index) {
+            if (fileHistory[index]) {
+                document.getElementById('input').value = fileHistory[index].content;
+                updateLineNumbers('input', 'inputLineNumbers');
+                document.getElementById('lineCount').textContent = fileHistory[index].content.split('\n').length;
+            }
+        }
+
+        function copyOutput() {
+            var output = document.getElementById('output');
+            if (!output.value) {
+                alert('No fixed YAML to copy. Click "Fix YAML" first!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(output.value).then(function() {
+                var btn = event.target.closest('button');
+                var originalText = btn.innerHTML;
+                btn.innerHTML = 'Copied!';
+                btn.style.background = '#38a169';
+                
+                setTimeout(function() {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#48bb78';
+                }, 2000);
+            });
+        }
+        
+        function downloadYAML() {
+            var output = document.getElementById('output').value;
+            if (!output) {
+                alert('No fixed YAML to download. Click "Fix YAML" first!');
+                return;
+            }
+            
+            var blob = new Blob([output], { type: 'text/yaml' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'fixed-workflow.yml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Drag and drop support
+        var fileDrop = document.getElementById('fileDrop');
+        
+        fileDrop.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileDrop.classList.add('dragover');
+        });
+        
+        fileDrop.addEventListener('dragleave', function() {
+            fileDrop.classList.remove('dragover');
+        });
+        
+        fileDrop.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileDrop.classList.remove('dragover');
+            
+            var files = e.dataTransfer.files;
+            if (files.length) {
+                document.getElementById('fileInput').files = files;
+                handleFileUpload({ target: { files: files } });
+            }
+        });
+    </script>
+</body>
+</html>
