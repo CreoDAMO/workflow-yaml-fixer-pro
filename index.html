@@ -748,7 +748,7 @@
         // CHECK IF JS-YAML IS LOADED
         // ============================================
         function checkJsYamlLoaded() {
-            return typeof jsyaml !== 'undefined';
+            return typeof jsyaml !== 'undefined' && jsyaml !== null;
         }
 
         // Show loading until js-yaml is ready
@@ -937,93 +937,132 @@
         }
 
         // ============================================
-        // YAML FIXING & VALIDATION
+        // YAML FIXING & VALIDATION (FIXED)
         // ============================================
         async function fixYAML() {
-            // Wait for js-yaml to be loaded
-            try {
-                await waitForJsYaml();
-            } catch (e) {
-                showToast('Error: YAML library failed to load. Please refresh the page.', 'error');
+            console.log('fixYAML called');
+            
+            // Get DOM elements
+            const inputEl = document.getElementById('input');
+            const outputEl = document.getElementById('output');
+            const highlightEl = document.getElementById('outputHighlight');
+            
+            if (!inputEl) {
+                console.error('Missing input element');
+                showToast('Internal error: input missing', 'error');
                 return;
             }
-
-            const yaml = document.getElementById('input').value.trim();
-            if (!yaml) {
+            if (!outputEl) {
+                console.error('Missing output element');
+                showToast('Internal error: output missing', 'error');
+                return;
+            }
+            
+            const yaml = inputEl.value || '';
+            if (!yaml.trim()) {
                 showToast('Please paste some YAML first!', 'error');
                 return;
             }
 
+            // Ensure jsyaml exists
+            if (!checkJsYamlLoaded()) {
+                console.error('jsyaml not found');
+                // Try waiting for it
+                try {
+                    await waitForJsYaml();
+                } catch (e) {
+                    showToast('Internal error: YAML parser not loaded. Please refresh the page.', 'error');
+                    return;
+                }
+            }
+
+            let parsed = null;
             try {
-                parsedWorkflow = jsyaml.load(yaml);
+                parsed = jsyaml.load(yaml);
             } catch (e) {
+                console.error('YAML parse error', e);
                 showToast('Invalid YAML: ' + e.message, 'error');
                 return;
             }
 
-            const originalActions = [];
-            
-            Object.values(parsedWorkflow.jobs || {}).forEach(job => {
-                (job.steps || []).forEach(step => {
-                    if (step.uses) originalActions.push(step.uses);
+            try {
+                // Safe defaults
+                if (!parsed.name) parsed.name = 'CI';
+                if (!parsed.permissions) parsed.permissions = { contents: 'read' };
+                if (!parsed.concurrency) parsed.concurrency = { group: '${{ github.workflow }}-${{ github.ref }}', 'cancel-in-progress': true };
+
+                const upgradeMap = {};
+                popularActions.forEach(a => {
+                    if (a && a.repo) upgradeMap[a.repo] = a.current;
                 });
-            });
 
-            if (!parsedWorkflow.name) parsedWorkflow.name = 'CI';
-            if (!parsedWorkflow.permissions) parsedWorkflow.permissions = { contents: 'read' };
-            if (!parsedWorkflow.concurrency) parsedWorkflow.concurrency = { group: '${{ github.workflow }}-${{ github.ref }}', 'cancel-in-progress': true };
-            
-            const upgradeMap = {};
-            popularActions.forEach(a => upgradeMap[a.repo] = a.current);
-
-            let actionsUpgradedCount = 0;
-
-            function upgradeSteps(steps) {
-                if (!steps) return;
-                steps.forEach(step => {
-                    if (step.uses) {
-                        const [repo] = step.uses.split('@');
-                        if (upgradeMap[repo]) {
-                            const newUses = `${repo}@${upgradeMap[repo]}`;
-                            if (step.uses !== newUses) {
-                                step.uses = newUses;
-                                actionsUpgradedCount++;
+                let actionsUpgradedCount = 0;
+                function upgradeSteps(steps) {
+                    if (!steps) return;
+                    steps.forEach(step => {
+                        try {
+                            if (step && step.uses) {
+                                const [repo] = step.uses.split('@');
+                                if (repo && upgradeMap[repo]) {
+                                    const newUses = repo + '@' + upgradeMap[repo];
+                                    if (step.uses !== newUses) {
+                                        step.uses = newUses;
+                                        actionsUpgradedCount++;
+                                    }
+                                }
                             }
+                        } catch (inner) {
+                            console.warn('Error upgrading step', inner);
                         }
-                    }
+                    });
+                }
+
+                Object.values(parsed.jobs || {}).forEach(job => {
+                    try { upgradeSteps(job.steps); } catch (e) { console.warn('Error upgrading job steps', e); }
                 });
-            }
 
-            Object.values(parsedWorkflow.jobs || {}).forEach(job => upgradeSteps(job.steps));
+                const fixed = jsyaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
 
-            const fixed = jsyaml.dump(parsedWorkflow, { indent: 2, lineWidth: -1, noRefs: true });
-            document.getElementById('output').value = fixed;
-            document.getElementById('outputHighlight').innerHTML = syntaxHighlight(fixed);
-            updateLineNumbers('output');
+                // Write output safely - THIS IS THE KEY FIX
+                try {
+                    outputEl.value = fixed;
+                    if (highlightEl) highlightEl.innerHTML = syntaxHighlight(fixed);
+                    try { updateLineNumbers('output'); } catch (e) { /* non-critical */ }
+                } catch (domErr) {
+                    console.error('Failed to write output to DOM', domErr);
+                    showToast('Internal error writing output', 'error');
+                    return;
+                }
 
-            // Increment fix count (even for free users)
-            user.fixesUsed++;
-            user.totalFixes++;
-            user.actionsUpgraded += actionsUpgradedCount;
-            user.sessions.push({
-                date: new Date().toISOString(),
-                fixes: user.fixesUsed,
-                actionsUpgraded: actionsUpgradedCount
-            });
+                // Book-keeping (increment counts AFTER output is written)
+                user.fixesUsed = (user.fixesUsed || 0) + 1;
+                user.totalFixes = (user.totalFixes || 0) + 1;
+                user.actionsUpgraded = (user.actionsUpgraded || 0) + actionsUpgradedCount;
+                user.sessions = user.sessions || [];
+                user.sessions.push({
+                    date: new Date().toISOString(),
+                    fixes: user.fixesUsed,
+                    actionsUpgraded: actionsUpgradedCount
+                });
+                saveUser();
 
-            updateUsageBar();
-            updateStats();
-            runQuickValidation();
-            renderGraph();
-            updateAnalytics();
-            saveUser();
+                updateUsageBar();
+                updateStats();
+                runQuickValidation();
+                renderGraph();
+                updateAnalytics();
 
-            // Check if user hit the limit and show appropriate message
-            if (!user.premium && user.fixesUsed >= 5) {
-                document.getElementById('limitBanner').classList.add('show');
-                showToast(`Fixed! ${actionsUpgradedCount} actions upgraded. You've used all free fixes!`, 'warning');
-            } else {
-                showToast(`Fixed! ${actionsUpgradedCount} actions upgraded.`);
+                // AFTER output: show banner if free limit reached
+                if (!user.premium && user.fixesUsed >= 5) {
+                    const limitBanner = document.getElementById('limitBanner');
+                    if (limitBanner) limitBanner.classList.add('show');
+                    showToast(`Fixed! ${actionsUpgradedCount} actions upgraded. You have used all free fixes.`, 'warning');
+                } else {
+                    showToast(`Fixed! ${actionsUpgradedCount} actions upgraded.`);
+                }
+            } catch (e) {
+                console.error('Unexpected error in fixYAML', e);
+                showToast('Unexpected error while fixing YAML', 'error');
             }
         }
 
@@ -1072,7 +1111,9 @@
 
         function updateLineNumbers(id) {
             const ta = document.getElementById(id);
+            if (!ta) return;
             const ln = document.getElementById(id === 'input' ? 'inputLineNumbers' : 'outputLineNumbers');
+            if (!ln) return;
             const lines = ta.value.split('\n').length;
             ln.innerHTML = Array.from({length: Math.max(lines, 5)}, (_, i) => `<span>${i+1}</span>`).join('');
         }
@@ -1095,7 +1136,7 @@
             const percent = limit === Infinity ? 100 : Math.min((used / limit) * 100, 100);
             document.getElementById('usageFill').style.width = percent + '%';
             document.getElementById('usageFill').style.background = user.premium ? 'linear-gradient(135deg, #10b981, #059669)' : 'var(--accent-primary)';
-            document.getElementById('usageText').textContent = user.premium ? '✨ Premium: Unlimited fixes' : `${used}/${limit} free fixes used`;
+            document.getElementById('usageText').textContent = user.premium ? '✨ Premium: `${used}/${limit Unlimited fixes' :} free fixes used`;
             
             if (!user.premium && user.fixesUsed >= 5) {
                 document.getElementById('limitBanner').classList.add('show');
