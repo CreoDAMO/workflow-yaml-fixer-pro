@@ -328,6 +328,34 @@
             margin: 0 10px;
         }
 
+        /* Dependency Generator Styles */
+        .dep-generator {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .dep-generator select {
+            padding: 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+        }
+
+        .dep-output {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+            min-height: 200px;
+            overflow: auto;
+        }
+
         /* Template Styles */
         .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
 
@@ -373,12 +401,17 @@
         }
 
         .modal-content h2 { margin-bottom: 15px; color: var(--accent-primary); }
+
         .modal-content p { margin-bottom: 15px; color: var(--text-secondary); line-height: 1.6; }
+
         .modal-content .price { font-size: 32px; font-weight: bold; color: var(--accent-gold); margin: 20px 0; }
+
         .modal-content .features { text-align: left; margin: 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+
         .modal-content .features li { margin: 10px 0; color: var(--text-primary); }
 
         .usage-bar { background: var(--border); height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+
         .usage-fill { background: var(--accent-primary); height: 100%; width: 0%; transition: width 0.5s; }
 
         .premium-badge { background: linear-gradient(135deg, gold, orange); color: black; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 10px; }
@@ -386,6 +419,7 @@
         .premium-badge-small { background: linear-gradient(135deg, gold, orange); color: black; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
 
         .referral-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-top: 15px; }
+
         .referral-input { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-family: monospace; font-size: 12px; margin-top: 10px; }
 
         .loading-spinner {
@@ -415,6 +449,40 @@
         }
 
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .limit-reached-banner {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .limit-reached-banner.show { display: block; }
+
+        .limit-reached-banner h4 { color: var(--warning); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+        .limit-reached-banner p { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-overlay.show { display: flex; }
+
+        .loading-overlay h3 { color: var(--text-primary); }
     </style>
 </head>
 <body>
@@ -422,20 +490,21 @@
         <div class="header">
             <h1>Workflow YAML Fixer Pro <span class="premium-badge">Premium Available</span></h1>
             <div class="header-actions">
-                <button class="btn-secondary" onclick="importFile()">📂 Import</button>
-                <button class="btn-secondary" onclick="exportAll()">💾 Export All</button>
-                <button class="donate-btn" onclick="showModal('donateModal')">💰 Support Development</button>
-                <button class="upgrade-btn" onclick="showModal('upgradeModal')">🚀 Go Premium</button>
-                <button class="buy-now-btn" onclick="showModal('buyModal')">💎 Buy This Tool – $750,000</button>
+                <button class="btn-secondary" onclick="importFile()" aria-label="Import YAML file">📂 Import</button>
+                <button class="btn-secondary" onclick="exportAll()" aria-label="Export all data">💾 Export All</button>
+                <button class="donate-btn" onclick="showModal('donateModal')" aria-label="Support development">💰 Support Development</button>
+                <button class="upgrade-btn" onclick="showModal('upgradeModal')" aria-label="Go premium">🚀 Go Premium</button>
+                <button class="buy-now-btn" onclick="showModal('buyModal')" aria-label="Buy this tool">💎 Buy This Tool – $750,000</button>
             </div>
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('editor', event)">Editor & Fixer</button>
-            <button class="tab" onclick="switchTab('graph', event)">Interactive Graph</button>
-            <button class="tab" onclick="switchTab('validation', event)">Deep Validation</button>
-            <button class="tab" onclick="switchTab('templates', event)">Templates</button>
-            <button class="tab" onclick="switchTab('analytics', event)">Analytics</button>
+            <button class="tab active" onclick="switchTab('editor')" aria-label="Editor and fixer tab">Editor & Fixer</button>
+            <button class="tab" onclick="switchTab('graph')" aria-label="Interactive graph tab">Interactive Graph</button>
+            <button class="tab" onclick="switchTab('validation')" aria-label="Deep validation tab">Deep Validation</button>
+            <button class="tab" onclick="switchTab('templates')" aria-label="Templates tab">Templates</button>
+            <button class="tab" onclick="switchTab('dependencies')" aria-label="Dependency generator tab">Dependencies</button>
+            <button class="tab" onclick="switchTab('analytics')" aria-label="Analytics tab">Analytics</button>
         </div>
 
         <div id="editor-tab" class="tab-content active">
@@ -446,19 +515,19 @@
                         <div>
                             <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width: 0%;"></div></div>
                             <small><span id="usageText">0/5 free fixes used</span></small>
-                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="clearInput()">Clear</button>
+                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="clearInput()" aria-label="Clear input">Clear</button>
                         </div>
                     </div>
                     <div class="panel-body" style="padding: 0;">
                         <div class="editor-wrapper">
                             <div class="line-numbers" id="inputLineNumbers"></div>
                             <div class="highlight-layer editor-layer" id="inputHighlight"></div>
-                            <textarea class="editor-layer" id="input" placeholder="Paste GitHub Actions YAML here..." spellcheck="false" oninput="handleInput()" onscroll="syncScroll()"></textarea>
+                            <textarea class="editor-layer" id="input" placeholder="Paste GitHub Actions YAML here..." spellcheck="false" oninput="handleInput()" onscroll="syncScroll()" aria-label="YAML input editor"></textarea>
                         </div>
                     </div>
                     <div class="controls">
-                        <button class="btn-primary" onclick="fixYAML()">⚡ Fix & Auto-Upgrade Actions</button>
-                        <button class="upgrade-btn" onclick="showModal('upgradeModal')">Upgrade to Premium</button>
+                        <button class="btn-primary" onclick="fixYAML()" aria-label="Fix YAML">⚡ Fix & Auto-Upgrade Actions</button>
+                        <button class="upgrade-btn" onclick="showModal('upgradeModal')" aria-label="Upgrade to premium">Upgrade to Premium</button>
                     </div>
                 </div>
 
@@ -466,16 +535,21 @@
                     <div class="panel-header">
                         <div class="panel-title">Fixed Output <span class="badge-pro">PRO</span></div>
                         <div style="display: flex; gap: 5px;">
-                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="copyOutput()">Copy</button>
-                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="downloadYAML()">Download</button>
+                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="copyOutput()" aria-label="Copy output">Copy</button>
+                            <button class="btn-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="downloadYAML()" aria-label="Download YAML">Download</button>
                         </div>
                     </div>
                     <div class="panel-body" style="padding: 0;">
                         <div class="editor-wrapper">
                             <div class="line-numbers" id="outputLineNumbers"></div>
                             <div class="highlight-layer editor-layer" id="outputHighlight"></div>
-                            <textarea class="editor-layer" id="output" readonly placeholder="Fixed YAML will appear here..."></textarea>
+                            <textarea class="editor-layer" id="output" readonly placeholder="Fixed YAML will appear here..." aria-label="Fixed YAML output"></textarea>
                         </div>
+                    </div>
+                    <div id="limitBanner" class="limit-reached-banner">
+                        <h4>⚠️ Free Limit Reached</h4>
+                        <p>You've used all 5 free fixes. Upgrade to Premium for unlimited fixes!</p>
+                        <button class="upgrade-btn" onclick="showModal('upgradeModal')" style="width: 100%; justify-content: center;">🚀 Upgrade Now for Unlimited Access</button>
                     </div>
                 </div>
 
@@ -506,8 +580,8 @@
                             <h4 style="margin-bottom: 10px; font-size: 14px;">Share & Earn</h4>
                             <div class="referral-box">
                                 <p style="font-size: 12px; margin-bottom: 10px;">Generate a referral link and earn rewards!</p>
-                                <button class="btn-secondary" style="width: 100%;" onclick="generateReferralLink()">Generate Referral Link</button>
-                                <input type="text" id="referralInput" class="referral-input" readonly placeholder="Your referral link will appear here" style="margin-top: 10px;">
+                                <button class="btn-secondary" style="width: 100%;" onclick="generateReferralLink()" aria-label="Generate referral link">Generate Referral Link</button>
+                                <input type="text" id="referralInput" class="referral-input" readonly placeholder="Your referral link will appear here" aria-label="Referral link" style="margin-top: 10px;">
                                 <div id="referralStats" style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);"></div>
                             </div>
                         </div>
@@ -526,8 +600,8 @@
                 <div class="panel-header">
                     <div class="panel-title">Interactive Workflow Graph</div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn-secondary" onclick="renderGraph()">🔄 Refresh Graph</button>
-                        <button class="btn-secondary" onclick="exportGraph()">📷 Export as Image</button>
+                        <button class="btn-secondary" onclick="renderGraph()" aria-label="Refresh graph">🔄 Refresh Graph</button>
+                        <button class="btn-secondary" onclick="exportGraph()" aria-label="Export graph as image">📷 Export as Image</button>
                     </div>
                 </div>
                 <div class="panel-body" style="background:#0d1117; padding: 0;">
@@ -546,7 +620,7 @@
             <div class="panel" style="flex: 1;">
                 <div class="panel-header">
                     <div class="panel-title">Deep Validation & Best Practices</div>
-                    <button class="btn-primary" onclick="runDeepValidation()">🔍 Run Full Scan</button>
+                    <button class="btn-primary" onclick="runDeepValidation()" aria-label="Run full scan">🔍 Run Full Scan</button>
                 </div>
                 <div class="panel-body" id="validationContainer">
                     <div class="validation-item info">
@@ -575,6 +649,28 @@
                 <div class="panel-body">
                     <div class="template-grid" id="templateGrid">
                         <!-- Templates populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dependencies-tab" class="tab-content" style="display:none;">
+            <div class="panel" style="flex: 1;">
+                <div class="panel-header">
+                    <div class="panel-title">Dependency Generator</div>
+                    <button class="btn-primary" onclick="generateDependencies()" aria-label="Generate dependencies">🔧 Generate Dependencies</button>
+                </div>
+                <div class="panel-body">
+                    <div class="dep-generator">
+                        <p style="margin-bottom: 15px; color: var(--text-secondary); font-size: 13px;">Select a package manager to generate dependency files (e.g., requirements.txt, package.json) based on your workflow's actions and steps.</p>
+                        <select id="depType" aria-label="Select dependency type">
+                            <option value="python">Python (requirements.txt)</option>
+                            <option value="node">Node.js (package.json)</option>
+                            <option value="java">Java (pom.xml)</option>
+                            <option value="go">Go (go.mod)</option>
+                            <option value="rust">Rust (Cargo.toml)</option>
+                        </select>
+                        <div class="dep-output" id="depOutput">Generated dependency file will appear here...</div>
                     </div>
                 </div>
             </div>
@@ -619,7 +715,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div style="margin-top: 20px; padding: 20px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.3);">
                         <h4 style="margin-bottom: 10px; color: var(--accent-primary);">💎 Premium Analytics</h4>
                         <p style="font-size: 13px; color: var(--text-secondary);">Upgrade to unlock detailed analytics, export reports, team collaboration features, and custom branding.</p>
@@ -637,10 +732,56 @@
 
     <input type="file" id="fileInput" accept=".yml,.yaml" style="display: none;" onchange="handleFileUpload(event)">
 
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <!-- LOAD JS-YAML FROM CDN (works online) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <!-- HTML2CANVAS FOR GRAPH EXPORT -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <h3>Loading YAML library...</h3>
+    </div>
+    
     <script>
         // ============================================
-        // SAFE LOCALSTORAGE WRAPPER (Fixes the error)
+        // CHECK IF JS-YAML IS LOADED
+        // ============================================
+        function checkJsYamlLoaded() {
+            return typeof jsyaml !== 'undefined';
+        }
+
+        // Show loading until js-yaml is ready
+        function waitForJsYaml() {
+            return new Promise((resolve, reject) => {
+                if (checkJsYamlLoaded()) {
+                    resolve();
+                    return;
+                }
+                
+                // Show loading overlay
+                document.getElementById('loadingOverlay').classList.add('show');
+                
+                // Check every 100ms
+                const interval = setInterval(() => {
+                    if (checkJsYamlLoaded()) {
+                        clearInterval(interval);
+                        document.getElementById('loadingOverlay').classList.remove('show');
+                        resolve();
+                    }
+                }, 100);
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    clearInterval(interval);
+                    document.getElementById('loadingOverlay').classList.remove('show');
+                    reject(new Error('js-yaml library failed to load'));
+                }, 10000);
+            });
+        }
+
+        // ============================================
+        // SAFE LOCALSTORAGE WRAPPER
         // ============================================
         function safeLocalStorage() {
             try {
@@ -671,7 +812,6 @@
             actionsUpgraded: 0
         };
 
-        // Load/Save user data (safe)
         function loadUser() {
             if (hasLocalStorage) {
                 try {
@@ -697,7 +837,6 @@
 
         loadUser();
 
-        // Generate unique referral code
         if (!user.referralCode) {
             user.referralCode = 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase();
             saveUser();
@@ -718,7 +857,7 @@
             { name: 'aws-credentials', repo: 'aws-actions/configure-aws-credentials', current: 'v5.1.1' },
             { name: 'mdbook', repo: 'peaceiris/actions-mdbook', current: 'v2.0.0' },
             { name: 'setup-go', repo: 'actions/setup-go', current: 'v5.2.0' },
-            { name: 'setup-rust', repo: 'actions-rs/toolchain@v1', current: 'v1.0.0' },
+            { name: 'setup-rust', repo: 'actions-rs/toolchain', current: 'v1' },
             { name: 'github-script', repo: 'actions/github-script', current: 'v7.0.1' },
             { name: 'create-pull-request', repo: 'peter-evans/create-pull-request', current: 'v7.0.5' },
             { name: 'codecov-action', repo: 'codecov/codecov-action', current: 'v5.1.1' }
@@ -732,6 +871,11 @@
         async function fetchLatestVersions() {
             const status = document.getElementById('versionStatus');
             status.innerHTML = '<span class="loading-spinner"></span> Fetching latest versions...';
+
+            if (!navigator.onLine) {
+                status.textContent = '❌ Offline - using cached versions';
+                return;
+            }
 
             let updated = false;
             for (const action of popularActions) {
@@ -748,7 +892,6 @@
                 } catch (e) {
                     console.error(`Failed to fetch ${action.repo}:`, e);
                 }
-                // Rate limiting delay
                 await new Promise(r => setTimeout(r, 100));
             }
 
@@ -770,7 +913,6 @@
                 container.appendChild(tag);
             });
 
-            // Add fetch button if not exists
             if (!document.getElementById('fetchBtn')) {
                 const btn = document.createElement('button');
                 btn.id = 'fetchBtn';
@@ -797,9 +939,12 @@
         // ============================================
         // YAML FIXING & VALIDATION
         // ============================================
-        function fixYAML() {
-            if (!user.premium && user.fixesUsed >= 5) {
-                showModal('upgradeModal');
+        async function fixYAML() {
+            // Wait for js-yaml to be loaded
+            try {
+                await waitForJsYaml();
+            } catch (e) {
+                showToast('Error: YAML library failed to load. Please refresh the page.', 'error');
                 return;
             }
 
@@ -818,19 +963,16 @@
 
             const originalActions = [];
             
-            // Collect original actions for counting
             Object.values(parsedWorkflow.jobs || {}).forEach(job => {
                 (job.steps || []).forEach(step => {
                     if (step.uses) originalActions.push(step.uses);
                 });
             });
 
-            // Best practice fixes
             if (!parsedWorkflow.name) parsedWorkflow.name = 'CI';
             if (!parsedWorkflow.permissions) parsedWorkflow.permissions = { contents: 'read' };
             if (!parsedWorkflow.concurrency) parsedWorkflow.concurrency = { group: '${{ github.workflow }}-${{ github.ref }}', 'cancel-in-progress': true };
             
-            // Auto-upgrade actions
             const upgradeMap = {};
             popularActions.forEach(a => upgradeMap[a.repo] = a.current);
 
@@ -859,7 +1001,7 @@
             document.getElementById('outputHighlight').innerHTML = syntaxHighlight(fixed);
             updateLineNumbers('output');
 
-            // Update user stats
+            // Increment fix count (even for free users)
             user.fixesUsed++;
             user.totalFixes++;
             user.actionsUpgraded += actionsUpgradedCount;
@@ -876,7 +1018,13 @@
             updateAnalytics();
             saveUser();
 
-            showToast(`Fixed! ${actionsUpgradedCount} actions upgraded.`);
+            // Check if user hit the limit and show appropriate message
+            if (!user.premium && user.fixesUsed >= 5) {
+                document.getElementById('limitBanner').classList.add('show');
+                showToast(`Fixed! ${actionsUpgradedCount} actions upgraded. You've used all free fixes!`, 'warning');
+            } else {
+                showToast(`Fixed! ${actionsUpgradedCount} actions upgraded.`);
+            }
         }
 
         function syntaxHighlight(text) {
@@ -886,19 +1034,10 @@
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // Comments
             html = html.replace(/#.*$/gm, '<span class="yaml-comment">$&</span>');
-            
-            // Keys
             html = html.replace(/^(\s*)([\w-]+):/gm, '$1<span class="yaml-key">$2</span>:');
-            
-            // String values
             html = html.replace(/:\s*(['"])(.*?)\1/g, ': <span class="yaml-string">$2</span>');
-            
-            // Action uses
             html = html.replace(/(uses:\s*)([\w-\/]+@[\w\.\-]+)/g, '$1<span class="yaml-action">$2</span>');
-            
-            // Numbers
             html = html.replace(/\b(\d+)\b/g, '<span class="yaml-number">$1</span>');
             
             return html;
@@ -909,16 +1048,19 @@
             document.getElementById('inputHighlight').innerHTML = syntaxHighlight(input.value);
             updateLineNumbers('input');
             
-            try {
-                parsedWorkflow = jsyaml.load(input.value);
-                updateStats();
-                runQuickValidation();
-            } catch (e) {
-                parsedWorkflow = null;
-                const container = document.getElementById('quickValidation');
-                container.innerHTML = `<div class="validation-item error">YAML syntax error: ${e.message}</div>`;
-                document.getElementById('statIssues').textContent = '1';
-                document.getElementById('statIssues').style.color = 'var(--error)';
+            // Try to parse but don't show error if js-yaml not loaded yet
+            if (checkJsYamlLoaded()) {
+                try {
+                    parsedWorkflow = jsyaml.load(input.value);
+                    updateStats();
+                    runQuickValidation();
+                } catch (e) {
+                    parsedWorkflow = null;
+                    const container = document.getElementById('quickValidation');
+                    container.innerHTML = `<div class="validation-item error">YAML syntax error: ${e.message}</div>`;
+                    document.getElementById('statIssues').textContent = '1';
+                    document.getElementById('statIssues').style.color = 'var(--error)';
+                }
             }
             
             updateCursorPosition();
@@ -954,6 +1096,12 @@
             document.getElementById('usageFill').style.width = percent + '%';
             document.getElementById('usageFill').style.background = user.premium ? 'linear-gradient(135deg, #10b981, #059669)' : 'var(--accent-primary)';
             document.getElementById('usageText').textContent = user.premium ? '✨ Premium: Unlimited fixes' : `${used}/${limit} free fixes used`;
+            
+            if (!user.premium && user.fixesUsed >= 5) {
+                document.getElementById('limitBanner').classList.add('show');
+            } else {
+                document.getElementById('limitBanner').classList.remove('show');
+            }
         }
 
         function updateStats() {
@@ -990,7 +1138,6 @@
             }
             
             const issues = [];
-
             if (!parsedWorkflow.on) issues.push({ type: 'error', msg: 'Missing "on:" trigger - workflow will never run' });
             if (!parsedWorkflow.jobs) issues.push({ type: 'error', msg: 'Missing "jobs:" section' });
             if (!parsedWorkflow.permissions) issues.push({ type: 'warning', msg: 'Missing explicit permissions (adds security)' });
@@ -1004,16 +1151,16 @@
                     issues.push({ type: 'warning', msg: `Job "${Object.keys(parsedWorkflow.jobs)[idx]}" contains destructive rm command` });
                 }
             });
-
+            
             if (issues.length === 0) issues.push({ type: 'success', msg: '✅ Workflow structure looks good!' });
-
+            
             issues.forEach(issue => {
                 const div = document.createElement('div');
                 div.className = `validation-item ${issue.type}`;
                 div.innerHTML = `<span>${getIssueIcon(issue.type)}</span><span>${issue.msg}</span>`;
                 container.appendChild(div);
             });
-
+            
             const errorCount = issues.filter(i => i.type === 'error').length;
             const warningCount = issues.filter(i => i.type === 'warning').length;
             document.getElementById('statIssues').textContent = errorCount + warningCount;
@@ -1032,6 +1179,11 @@
         function runDeepValidation() {
             const container = document.getElementById('validationContainer');
             
+            if (!checkJsYamlLoaded()) {
+                container.innerHTML = '<div class="validation-item error">YAML library not loaded yet. Please refresh the page.</div>';
+                return;
+            }
+            
             if (!parsedWorkflow) {
                 container.innerHTML = '<div class="validation-item error">No YAML parsed. Please paste and fix YAML in the Editor tab first.</div>';
                 return;
@@ -1039,25 +1191,21 @@
 
             const results = [];
             const jobs = parsedWorkflow.jobs;
-
-            // Security checks
+            
             if (!parsedWorkflow.permissions) {
                 results.push({ type: 'warning', msg: 'Missing least-privilege permissions for GITHUB_TOKEN. This is a security best practice.' });
             }
-
-            // Concurrency
+            
             if (!parsedWorkflow.concurrency) {
                 results.push({ type: 'info', msg: 'Add concurrency to prevent overlapping runs and save resources.' });
             }
-
-            // Timeout
+            
             Object.entries(jobs).forEach(([name, job]) => {
                 if (!job['timeout-minutes']) {
                     results.push({ type: 'info', msg: `Job "${name}" has no timeout-minutes set. Consider adding one to prevent hanging jobs.` });
                 }
             });
-
-            // Action pinning
+            
             let branchActions = [];
             Object.values(jobs).forEach(job => {
                 (job.steps || []).forEach(step => {
@@ -1068,31 +1216,29 @@
                     }
                 });
             });
-
+            
             if (branchActions.length > 0) {
                 results.push({ type: 'error', msg: `${branchActions.length} action(s) pinned to branch instead of SHA. This is a security risk!` });
             }
-
-            // Circular dependencies
+            
             const jobNames = Object.keys(jobs);
             const graph = {};
-            jobNames.forEach(name => graph[name] = []);
+            const indegree = {};
+            jobNames.forEach(name => {
+                graph[name] = [];
+                indegree[name] = 0;
+            });
             
             jobNames.forEach(name => {
                 const needs = jobs[name].needs || [];
                 (Array.isArray(needs) ? needs : [needs]).forEach(dep => {
                     if (graph[dep] !== undefined) {
                         graph[dep].push(name);
+                        indegree[name]++;
                     }
                 });
             });
-
-            const indegree = {};
-            jobNames.forEach(name => indegree[name] = 0);
-            jobNames.forEach(name => {
-                graph[name].forEach(child => indegree[child]++);
-            });
-
+            
             const queue = jobNames.filter(n => indegree[n] === 0);
             const visited = new Set(queue);
             
@@ -1106,31 +1252,28 @@
                     }
                 });
             }
-
+            
             if (visited.size !== jobNames.length) {
                 const remaining = jobNames.filter(n => !visited.has(n));
                 results.push({ type: 'error', msg: `Circular dependency detected: ${remaining.join(' -> ')}` });
             }
-
-            // Missing if conditions
+            
             Object.entries(jobs).forEach(([name, job]) => {
                 if (!job.if && !job['runs-on']?.includes('ubuntu')) {
                     results.push({ type: 'info', msg: `Job "${name}" could benefit from conditional execution using 'if:'` });
                 }
             });
-
-            // Display results
+            
             container.innerHTML = '';
             if (results.length === 0) {
                 results.push({ type: 'success', msg: '🎉 No issues found! Your workflow follows best practices.' });
             }
-
-            // Summary
+            
             const summary = document.createElement('div');
             summary.className = 'validation-item ' + (results.some(r => r.type === 'error') ? 'error' : results.some(r => r.type === 'warning') ? 'warning' : 'success');
             summary.innerHTML = `<strong>Scan Complete:</strong> ${results.length} issue(s) found.`;
             container.appendChild(summary);
-
+            
             results.forEach(res => {
                 const div = document.createElement('div');
                 div.className = `validation-item ${res.type}`;
@@ -1140,7 +1283,7 @@
         }
 
         // ============================================
-        // GRAPH VISUALIZATION
+        // GRAPH VISUALIZATION & EXPORT
         // ============================================
         function renderGraph() {
             if (!parsedWorkflow || !parsedWorkflow.jobs) {
@@ -1154,14 +1297,13 @@
 
             const jobs = parsedWorkflow.jobs;
             const jobNames = Object.keys(jobs);
-
             const graph = {};
             const indegree = {};
             jobNames.forEach(name => {
                 graph[name] = [];
                 indegree[name] = 0;
             });
-
+            
             jobNames.forEach(name => {
                 const needs = jobs[name].needs || [];
                 (Array.isArray(needs) ? needs : [needs]).forEach(dep => {
@@ -1200,7 +1342,7 @@
                 
                 const levelDiv = document.createElement('div');
                 levelDiv.className = 'graph-level';
-
+                
                 level.forEach(jobName => {
                     const job = jobs[jobName];
                     const node = document.createElement('div');
@@ -1230,7 +1372,6 @@
                 }
             });
 
-            // Legend
             const legend = document.createElement('div');
             legend.style.cssText = 'margin-top:30px;padding:15px;background:rgba(0,0,0,0.3);border-radius:8px;font-size:12px;color:var(--text-secondary);';
             legend.innerHTML = '<strong>Legend:</strong> Nodes represent jobs. Arrows show dependencies (execution order). Click a job to highlight.';
@@ -1242,7 +1383,164 @@
         }
 
         function exportGraph() {
-            showToast('Graph export coming soon!', 'info');
+            const container = document.getElementById('graphContainer');
+            if (!container.querySelector('.graph-level')) {
+                showToast('No graph to export!', 'error');
+                return;
+            }
+
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'workflow-graph.png';
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast('Graph exported as image!');
+            }).catch(err => {
+                console.error('Export failed:', err);
+                showToast('Export failed. Try again.', 'error');
+            });
+        }
+
+        // ============================================
+        // DEPENDENCY GENERATOR
+        // ============================================
+        function generateDependencies() {
+            if (!checkJsYamlLoaded()) {
+                document.getElementById('depOutput').textContent = 'YAML library not loaded yet. Please refresh the page.';
+                return;
+            }
+            
+            if (!parsedWorkflow || !parsedWorkflow.jobs) {
+                document.getElementById('depOutput').textContent = 'No workflow parsed. Fix YAML first.';
+                return;
+            }
+
+            const type = document.getElementById('depType').value;
+            const jobs = parsedWorkflow.jobs;
+            let output = '';
+
+            switch (type) {
+                case 'python':
+                    const pythonDeps = new Set();
+                    Object.values(jobs).forEach(job => {
+                        (job.steps || []).forEach(step => {
+                            if (step.run) {
+                                const pipMatch = step.run.match(/pip install(?: -r)? (.+)/);
+                                if (pipMatch) {
+                                    pipMatch[1].split(' ').forEach(pkg => {
+                                        if (pkg && !pkg.startsWith('-')) pythonDeps.add(pkg);
+                                    });
+                                }
+                            }
+                        });
+                    });
+                    output = '# requirements.txt\n' + Array.from(pythonDeps).sort().join('\n');
+                    break;
+                    
+                case 'node':
+                    const nodeDeps = {};
+                    Object.values(jobs).forEach(job => {
+                        (job.steps || []).forEach(step => {
+                            if (step.run) {
+                                const npmMatch = step.run.match(/npm install (.+)/);
+                                if (npmMatch) {
+                                    npmMatch[1].split(' ').forEach(pkg => {
+                                        if (pkg && !pkg.startsWith('-')) {
+                                            nodeDeps[pkg] = '^1.0.0';
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    });
+                    output = JSON.stringify({
+                        "name": parsedWorkflow.name || "workflow-project",
+                        "version": "1.0.0",
+                        "dependencies": nodeDeps
+                    }, null, 2);
+                    break;
+                    
+                case 'java':
+                    const javaDeps = [];
+                    Object.values(jobs).forEach(job => {
+                        (job.steps || []).forEach(step => {
+                            if (step.uses && step.uses.includes('setup-java')) {
+                                javaDeps.push({
+                                    groupId: 'org.example',
+                                    artifactId: 'example-app',
+                                    version: '1.0.0'
+                                });
+                            }
+                        });
+                    });
+                    output = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>${parsedWorkflow.name || 'workflow-project'}</artifactId>
+  <version>1.0.0</version>
+  
+  <dependencies>
+    ${javaDeps.map(dep => `
+    <dependency>
+      <groupId>${dep.groupId}</groupId>
+      <artifactId>${dep.artifactId}</artifactId>
+      <version>${dep.version}</version>
+    </dependency>`).join('')}
+  </dependencies>
+</project>`;
+                    break;
+                    
+                case 'go':
+                    const goModules = new Set();
+                    Object.values(jobs).forEach(job => {
+                        (job.steps || []).forEach(step => {
+                            if (step.run) {
+                                const goMatch = step.run.match(/go get (.+)/);
+                                if (goMatch) {
+                                    goMatch[1].split(' ').forEach(mod => {
+                                        if (mod && !mod.startsWith('-')) goModules.add(mod);
+                                    });
+                                }
+                            }
+                        });
+                    });
+                    output = `module github.com/example/${parsedWorkflow.name || 'workflow-project'}
+
+go 1.21
+
+require (
+${Array.from(goModules).sort().map(mod => `\t${mod} v1.0.0`).join('\n')}
+)`;
+                    break;
+                    
+                case 'rust':
+                    const rustDeps = {};
+                    Object.values(jobs).forEach(job => {
+                        (job.steps || []).forEach(step => {
+                            if (step.run) {
+                                const cargoMatch = step.run.match(/cargo add (.+)/);
+                                if (cargoMatch) {
+                                    cargoMatch[1].split(' ').forEach(crate => {
+                                        if (crate && !crate.startsWith('-')) {
+                                            rustDeps[crate] = "0.1.0";
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    });
+                    output = `[package]
+name = "${parsedWorkflow.name || 'workflow-project'}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+${Object.entries(rustDeps).map(([crate, version]) => `${crate} = "${version}"`).join('\n')}`;
+                    break;
+            }
+
+            document.getElementById('depOutput').textContent = output || 'No dependencies detected in this workflow.';
         }
 
         // ============================================
@@ -1252,17 +1550,14 @@
             const templates = {
                 'Node.js CI/CD': {
                     yaml: `name: Node.js CI/CD
-
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main]
-
 permissions:
   contents: read
   pull-requests: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -1287,7 +1582,6 @@ jobs:
         uses: codecov/codecov-action@v5.1.1
         with:
           files: ./coverage/lcov.info
-
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -1305,7 +1599,6 @@ jobs:
                 },
                 'Python + Docker': {
                     yaml: `name: Python Docker Build
-
 on:
   push:
     branches: [main]
@@ -1313,15 +1606,12 @@ on:
       - 'v*'
   pull_request:
     branches: [main]
-
 permissions:
   contents: read
   packages: write
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: \${{ github.repository }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -1357,16 +1647,22 @@ jobs:
                 },
                 'Multi-Platform Deploy': {
                     yaml: `name: Multi-Platform Deploy
-
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 permissions:
   contents: read
   id-token: write
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -1377,7 +1673,6 @@ jobs:
         run: |
           echo "Running tests..."
           npm test
-
   deploy:
     runs-on: \${{ matrix.os }}
     needs: test
@@ -1406,23 +1701,16 @@ jobs:
                 },
                 'Release Manager': {
                     yaml: `name: Release Manager
-
 on:
   push:
     branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version number (e.g., 1.2.3)'
-        required: true
-
 permissions:
   contents: write
   packages: write
   pull-requests: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -1477,7 +1765,6 @@ jobs:
                 },
                 'Security Scanner': {
                     yaml: `name: Security Scan
-
 on:
   push:
     branches: [main, develop]
@@ -1487,11 +1774,9 @@ on:
       - '**/requirements.txt'
   schedule:
     - cron: '0 0 * * 0'  # Weekly scan
-
 permissions:
   contents: read
   security-events: write
-
 jobs:
   secret-scan:
     runs-on: ubuntu-latest
@@ -1504,7 +1789,6 @@ jobs:
           path: ./
           base: main
           extra_args: --debug --only-verified
-
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
@@ -1529,7 +1813,6 @@ jobs:
                 },
                 'AWS Deploy': {
                     yaml: `name: AWS Deployment
-
 on:
   push:
     branches: [main]
@@ -1543,12 +1826,9 @@ on:
         options:
           - staging
           - production
-
 permissions:
   contents: read
   id-token: write
-  actions: read
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -1576,7 +1856,7 @@ jobs:
                     tags: ['AWS', 'Cloud', 'Deploy']
                 }
             };
-
+            
             const grid = document.getElementById('templateGrid');
             grid.innerHTML = '';
             
@@ -1604,7 +1884,6 @@ jobs:
             switchTab('editor', event);
             showToast(`Loaded template: ${name}`);
             
-            // Track template usage
             if (user.templateUsage) {
                 user.templateUsage[name] = (user.templateUsage[name] || 0) + 1;
                 saveUser();
@@ -1617,7 +1896,6 @@ jobs:
         function updateAnalytics() {
             document.getElementById('totalFixes').textContent = user.totalFixes;
             
-            // Calculate jobs found
             if (parsedWorkflow && parsedWorkflow.jobs) {
                 const jobsFound = Object.keys(parsedWorkflow.jobs).length;
                 document.getElementById('totalJobsFound').textContent = 
@@ -1626,10 +1904,7 @@ jobs:
             
             document.getElementById('totalActionsUpgraded').textContent = user.actionsUpgraded;
             
-            // Update activity chart
             updateActivityChart();
-            
-            // Update template usage
             updateTemplateUsage();
         }
 
@@ -1640,7 +1915,6 @@ jobs:
                 return;
             }
             
-            // Last 7 days
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const today = new Date();
             const activity = [];
@@ -1802,26 +2076,19 @@ jobs:
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         }
 
-        // Close modal on outside click
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                closeModal();
-            }
-        };
-
         // ============================================
         // TOAST NOTIFICATIONS
         // ============================================
         function showToast(message, type = 'success') {
             const existing = document.querySelector('.toast');
             if (existing) existing.remove();
-            
+
             const toast = document.createElement('div');
             toast.className = 'toast';
             toast.style.background = type === 'error' ? 'var(--error)' : type === 'info' ? 'var(--accent-primary)' : 'var(--success)';
             toast.textContent = message;
             document.body.appendChild(toast);
-            
+
             setTimeout(() => toast.remove(), 3000);
         }
 
@@ -1836,17 +2103,18 @@ jobs:
             
             document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
             document.getElementById(tabName + '-tab').style.display = 'block';
-
+            
             if (tabName === 'graph') renderGraph();
             if (tabName === 'validation') runDeepValidation();
             if (tabName === 'templates') generateTemplates();
+            if (tabName === 'dependencies') generateDependencies();
             if (tabName === 'analytics') updateAnalytics();
         }
 
         // ============================================
         // INITIALIZATION
         // ============================================
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             updateLineNumbers('input');
             updateLineNumbers('output');
             populatePopularActions();
@@ -1854,27 +2122,40 @@ jobs:
             updateUsageBar();
             updateAnalytics();
             
-            // Check URL for referral code
             const urlParams = new URLSearchParams(window.location.search);
             const ref = urlParams.get('ref');
             if (ref) {
                 console.log('Referral code found:', ref);
-                // Could track referral here
             }
-
-            // Fetch latest versions on load
-            fetchLatestVersions();
+            
+            // Wait for js-yaml to load if not already loaded
+            try {
+                await waitForJsYaml();
+            } catch (e) {
+                console.error('Failed to load js-yaml library');
+                showToast('Warning: YAML library not loaded. Some features may not work.', 'error');
+            }
+            
+            if (navigator.onLine) {
+                fetchLatestVersions();
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    downloadYAML();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    fixYAML();
+                }
+            });
         });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                downloadYAML();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                fixYAML();
+        
+        // Modal close on outside click
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal();
             }
         });
     </script>
@@ -1882,9 +2163,9 @@ jobs:
     <!-- ============================================ -->
     <!-- MODALS -->
     <!-- ============================================ -->
-    
+
     <!-- Donate Modal -->
-    <div class="modal" id="donateModal" onclick="if(event.target === this) closeModal();">
+    <div class="modal" id="donateModal">
         <div class="modal-content">
             <h2>💰 Support Development</h2>
             <p>Love GitHub Workflow YAML Fixer Pro? Help us grow and keep it free for everyone!</p>
@@ -1900,20 +2181,20 @@ jobs:
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0;">
-                <button class="btn-primary" style="flex: none; padding: 15px 30px;" onclick="window.open('https://github.com/sponsors/yourusername', '_blank')">
+                <button onclick="window.open('https://github.com/sponsors/yourusername', '_blank')" aria-label="Go to GitHub Sponsors">
                     ❤️ GitHub Sponsors
                 </button>
-                <button class="donate-btn" style="flex: none; padding: 15px 30px;" onclick="showModal('stripeModal')">
+                <button onclick="showModal('stripeModal')" aria-label="Pay with Stripe">
                     💳 PayPal / Card
                 </button>
             </div>
             
-            <button class="btn-secondary" onclick="closeModal()">Close</button>
+            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
         </div>
     </div>
 
     <!-- Upgrade Modal -->
-    <div class="modal" id="upgradeModal" onclick="if(event.target === this) closeModal();">
+    <div class="modal" id="upgradeModal">
         <div class="modal-content">
             <h2>🚀 Go Premium</h2>
             <p>Unlock unlimited power for your CI/CD workflows!</p>
@@ -1939,12 +2220,12 @@ jobs:
             
             <p style="font-size: 12px; color: var(--text-secondary);">30-day money-back guarantee • Cancel anytime</p>
             
-            <button class="btn-secondary" onclick="closeModal()">Close</button>
+            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
         </div>
     </div>
 
     <!-- Buy Modal -->
-    <div class="modal" id="buyModal" onclick="if(event.target === this) closeModal();">
+    <div class="modal" id="buyModal">
         <div class="modal-content">
             <h2 style="color: var(--accent-gold);">💎 Acquire GitHub Workflow YAML Fixer Pro</h2>
             <p style="font-size: 24px; color: var(--accent-gold); margin: 20px 0;">$750,000</p>
@@ -1965,7 +2246,7 @@ jobs:
                 </ul>
             </div>
             
-            <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid rgba(99, 102, 241, 0.3);">
                 <h4 style="margin-bottom: 10px;">📊 Valuation Rationale</h4>
                 <p style="font-size: 13px; color: var(--text-secondary);">
                     This tool has demonstrated product-market fit with proven monetization. 
@@ -1976,21 +2257,21 @@ jobs:
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
-                <button class="buy-now-btn" style="flex: none; padding: 15px 30px; font-size: 16px;" onclick="window.open('mailto:acquire@workflowfixer.com?subject=Acquisition Inquiry - GitHub Workflow YAML Fixer Pro', '_blank')">
+                <button class="buy-now-btn" style="flex: none; padding: 15px 30px; font-size: 16px;" onclick="window.open('mailto:acquire@workflowfixer.com?subject=Acquisition Inquiry - GitHub Workflow YAML Fixer Pro', '_blank')" aria-label="Contact for purchase">
                     📧 Contact for Purchase
                 </button>
             </div>
             
             <p style="font-size: 12px; color: var(--text-secondary);">
-                Serious inquiries only.escrow.com protection available.
+                Serious inquiries only. Escrow.com protection available.
             </p>
             
-            <button class="btn-secondary" onclick="closeModal()">Close</button>
+            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
         </div>
     </div>
 
     <!-- Stripe Modal (Mock) -->
-    <div class="modal" id="stripeModal" onclick="if(event.target === this) closeModal();">
+    <div class="modal" id="stripeModal">
         <div class="modal-content">
             <h2>💳 Payment</h2>
             <p>This is a demo. In production, this would integrate with Stripe Checkout.</p>
@@ -2014,7 +2295,7 @@ jobs:
             
             <p style="font-size: 11px; color: var(--text-secondary);">🔒 Secured by Stripe • PCI Compliant</p>
             
-            <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Cancel</button>
         </div>
     </div>
 
