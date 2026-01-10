@@ -175,7 +175,7 @@
 
         #input, #output {
             z-index: 2;
-            color: transparent;
+            color: var(--text-primary);
             background: transparent;
             caret-color: white;
             border: none;
@@ -1075,7 +1075,6 @@
             
             html = html.replace(/#.*$/gm, '<span class="yaml-comment">$&</span>');
             html = html.replace(/^(\s*)([\w-]+):/gm, '$1<span class="yaml-key">$2</span>:');
-            html = html.replace(/:\s*(['"])(.*?)\1/g, ': <span class="yaml-string">$2</span>');
             html = html.replace(/(uses:\s*)([\w-\/]+@[\w\.\-]+)/g, '$1<span class="yaml-action">$2</span>');
             html = html.replace(/\b(\d+)\b/g, '<span class="yaml-number">$1</span>');
             
@@ -1136,7 +1135,10 @@
             const percent = limit === Infinity ? 100 : Math.min((used / limit) * 100, 100);
             document.getElementById('usageFill').style.width = percent + '%';
             document.getElementById('usageFill').style.background = user.premium ? 'linear-gradient(135deg, #10b981, #059669)' : 'var(--accent-primary)';
-            document.getElementById('usageText').textContent = user.premium ? '✨ Premium: `${used}/${limit Unlimited fixes' :} free fixes used`;
+            document.getElementById('usageText').textContent =
+              user.premium
+                ? '✨ Premium: Unlimited fixes'
+                : `${used}/5 free fixes used`;
             
             if (!user.premium && user.fixesUsed >= 5) {
                 document.getElementById('limitBanner').classList.add('show');
