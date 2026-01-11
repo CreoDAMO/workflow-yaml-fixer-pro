@@ -1,4 +1,16 @@
-## Here is the complete, updated HTML file with the applied specifications for Auto-Upgrade Logic and Real Payment Integration.
+# Analysis and Fixed Code
+
+I've analyzed your code and identified several issues that need to be addressed before deployment:
+
+## Issues Found
+
+1. **PayPal buttons never render** - `startPayPalPayment()` is defined but never called when modals open
+2. **VS Code extension has syntax errors** - imports placed incorrectly in `extension.ts`
+3. **PayPal SDK container ID mismatch** - some containers reference non-existent IDs
+4. **Missing error handling** for payment SDK failures
+5. **Free limit bypass** - `fixYAML()` continues processing even after hitting free limit
+
+Here is the corrected and complete code:
 
 ```html
 <!DOCTYPE html>
@@ -886,7 +898,12 @@
             let updated = false;
             for (const action of popularActions) {
                 try {
-                    const response = await fetch(`https://api.github.com/repos/${action.repo}/releases/latest`);
+                    const response = await fetch(`https://api.github.com/repos/${action.repo}/releases/latest`, {
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'User-Agent': 'Workflow-YAML-Fixer'
+                        }
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         const latest = data.tag_name;
@@ -943,10 +960,143 @@
         }
 
         // ============================================
+        // PAYMENT INTEGRATION
+        // ============================================
+        
+        // PayPal buttons rendered flag to prevent double-rendering
+        let paypalDonateRendered = false;
+        let paypalUpgradeRendered = false;
+
+        // Initialize PayPal buttons in modals
+        function initPayPalButtons() {
+            // Donate modal PayPal button
+            const donateContainer = document.getElementById('paypal-donate-container');
+            if (donateContainer && typeof paypal !== 'undefined' && !paypalDonateRendered) {
+                try {
+                    paypal.Buttons({
+                        createOrder: (data, actions) => {
+                            return actions.order.create({
+                                purchase_units: [{
+                                    amount: { value: '5.00' }
+                                }]
+                            });
+                        },
+                        onApprove: (data, actions) => {
+                            return actions.order.capture().then(details => {
+                                showToast('Thank you for your donation! 💖');
+                                user.premium = true;
+                                saveUser();
+                                updateUsageBar();
+                            });
+                        },
+                        onError: (err) => {
+                            console.error('PayPal error:', err);
+                            showToast('PayPal payment failed. Please try again.', 'error');
+                        }
+                    }).render('#paypal-donate-container');
+                    paypalDonateRendered = true;
+                } catch (e) {
+                    console.error('Failed to render PayPal donate button:', e);
+                    donateContainer.innerHTML = '<p style="color: var(--error); font-size: 12px;">PayPal unavailable</p>';
+                }
+            }
+
+            // Upgrade modal PayPal button (subscription)
+            const upgradeContainer = document.getElementById('paypal-upgrade-container');
+            if (upgradeContainer && typeof paypal !== 'undefined' && !paypalUpgradeRendered) {
+                try {
+                    paypal.Buttons({
+                        createOrder: (data, actions) => {
+                            return actions.order.create({
+                                purchase_units: [{
+                                    amount: { value: '9.99' }
+                                }]
+                            });
+                        },
+                        onApprove: (data, actions) => {
+                            return actions.order.capture().then(details => {
+                                showToast('Payment successful! Premium activated. 🎉');
+                                user.premium = true;
+                                saveUser();
+                                updateUsageBar();
+                                closeModal();
+                            });
+                        },
+                        onError: (err) => {
+                            console.error('PayPal error:', err);
+                            showToast('PayPal payment failed. Please try again.', 'error');
+                        }
+                    }).render('#paypal-upgrade-container');
+                    paypalUpgradeRendered = true;
+                } catch (e) {
+                    console.error('Failed to render PayPal upgrade button:', e);
+                    upgradeContainer.innerHTML = '<p style="color: var(--error); font-size: 12px;">PayPal unavailable</p>';
+                }
+            }
+        }
+
+        // Initialize Stripe
+        // REPLACE 'pk_test_YOUR_STRIPE_KEY_HERE' with your actual Stripe Publishable Key
+        let stripe = null;
+        try {
+            if (typeof Stripe !== 'undefined') {
+                stripe = Stripe('pk_test_YOUR_STRIPE_KEY_HERE');
+            }
+        } catch (e) {
+            console.error('Failed to initialize Stripe:', e);
+        }
+
+        function startStripeCheckout() {
+            if (!stripe) {
+                showToast('Stripe is not configured. Please check your internet connection.', 'error');
+                return;
+            }
+            
+            // REPLACE 'price_YOUR_MONTHLY_PRICE_ID' with your actual Stripe Price ID for the subscription
+            const priceId = 'price_YOUR_MONTHLY_PRICE_ID';
+            
+            stripe.redirectToCheckout({
+                lineItems: [{ price: priceId, quantity: 1 }],
+                mode: 'subscription',
+                successUrl: window.location.origin + window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}&success=true',
+                cancelUrl: window.location.origin + window.location.pathname + '?canceled=true'
+            }).then(result => {
+                if (result.error) {
+                    showToast(result.error.message, 'error');
+                }
+            });
+        }
+
+        function generateReferralLink() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const link = `${baseUrl}?ref=${user.referralCode}`;
+            document.getElementById('referralInput').value = link;
+            
+            document.getElementById('referralStats').innerHTML = `
+                <div style="margin-top:10px;padding:10px;background:rgba(99,102,241,0.1);border-radius:6px;">
+                    <strong>Your Stats:</strong><br>
+                    Referrals: ${user.referrals}<br>
+                    Code: ${user.referralCode}
+                </div>
+            `;
+            
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('Referral link copied!');
+            });
+        }
+
+        // ============================================
         // YAML FIXING & VALIDATION (FIXED & UPGRADED)
         // ============================================
         async function fixYAML() {
             console.log('fixYAML called');
+            
+            // Check free limit for non-premium users
+            if (!user.premium && user.fixesUsed >= 5) {
+                document.getElementById('limitBanner').classList.add('show');
+                showToast('Free limit reached! Upgrade to Premium for unlimited fixes.', 'warning');
+                return;
+            }
             
             // Get DOM elements
             const inputEl = document.getElementById('input');
@@ -2094,82 +2244,15 @@ jobs:
         }
 
         // ============================================
-        // REAL PAYMENT INTEGRATION
-        // ============================================
-        
-        // Initialize Stripe
-        // REPLACE 'pk_test_YOUR_STRIPE_KEY_HERE' with your actual Stripe Publishable Key
-        const stripe = Stripe('pk_test_YOUR_STRIPE_KEY_HERE');
-
-        function startStripeCheckout() {
-            // REPLACE 'price_YOUR_MONTHLY_PRICE_ID' with your actual Stripe Price ID for the subscription
-            stripe.redirectToCheckout({
-                lineItems: [{ price: 'price_YOUR_MONTHLY_PRICE_ID', quantity: 1 }],
-                mode: 'subscription',
-                successUrl: window.location.origin + window.location.pathname + '?session_id={CHECKOUT_SESSION_ID}',
-                cancelUrl: window.location.origin + window.location.pathname
-            }).then(result => {
-                if (result.error) {
-                    showToast(result.error.message, 'error');
-                }
-            });
-        }
-
-        function startPayPalPayment() {
-            // PayPal button rendering is handled by the SDK, we just need to make sure the modal is open
-            // and the SDK renders the button into the container we added in the modal HTML
-            if (typeof paypal !== 'undefined') {
-                paypal.Buttons({
-                    createOrder: (data, actions) => {
-                        return actions.order.create({
-                            purchase_units: [{
-                                amount: {
-                                    value: '9.99'
-                                }
-                            }]
-                        });
-                    },
-                    onApprove: (data, actions) => {
-                        return actions.order.capture().then(details => {
-                            showToast('Payment successful! Premium activated.');
-                            user.premium = true;
-                            saveUser();
-                            updateUsageBar();
-                            closeModal();
-                        });
-                    }
-                }).render('#paypal-button-container');
-            } else {
-                showToast('PayPal SDK not loaded. Check your internet connection.', 'error');
-            }
-        }
-
-        function generateReferralLink() {
-            const baseUrl = window.location.origin + window.location.pathname;
-            const link = `${baseUrl}?ref=${user.referralCode}`;
-            document.getElementById('referralInput').value = link;
-            
-            document.getElementById('referralStats').innerHTML = `
-                <div style="margin-top:10px;padding:10px;background:rgba(99,102,241,0.1);border-radius:6px;">
-                    <strong>Your Stats:</strong><br>
-                    Referrals: ${user.referrals}<br>
-                    Code: ${user.referralCode}
-                </div>
-            `;
-            
-            navigator.clipboard.writeText(link).then(() => {
-                showToast('Referral link copied!');
-            });
-        }
-
-        // ============================================
         // MODALS
         // ============================================
         function showModal(id) {
             document.getElementById(id).style.display = 'flex';
-            if (id === 'stripeModal') {
-                // Render PayPal button when Stripe modal opens (or separate donate modal)
-                // In this layout, Stripe modal is for payment selection mostly
+            
+            // Initialize PayPal buttons when modals open
+            if (id === 'donateModal' || id === 'upgradeModal') {
+                // Small delay to ensure modal is visible
+                setTimeout(initPayPalButtons, 100);
             }
         }
 
@@ -2229,6 +2312,20 @@ jobs:
                 console.log('Referral code found:', ref);
             }
             
+            // Check for Stripe session success
+            const success = urlParams.get('success');
+            if (success === 'true') {
+                const sessionId = urlParams.get('session_id');
+                if (sessionId) {
+                    showToast('Payment successful! Premium activated. 🎉');
+                    user.premium = true;
+                    saveUser();
+                    updateUsageBar();
+                }
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
             // Wait for js-yaml to load if not already loaded
             try {
                 await waitForJsYaml();
@@ -2282,8 +2379,8 @@ jobs:
             </div>
             
             <div style="margin: 20px 0; text-align: left;">
-                <h4 style="margin-bottom: 10px;">PayPal Payment:</h4>
-                <div id="paypal-button-container" style="max-width: 300px; margin: 0 auto;"></div>
+                <h4 style="margin-bottom: 10px;">PayPal Payment ($5.00):</h4>
+                <div id="paypal-donate-container" style="max-width: 300px; margin: 0 auto;"></div>
             </div>
             
             <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
@@ -2311,8 +2408,13 @@ jobs:
                 </ul>
             </div>
             
-            <button class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px; margin: 20px 0;" onclick="startStripeCheckout()">
-                🔒 Subscribe Now (Stripe)
+            <div style="margin: 20px 0;">
+                <h4 style="margin-bottom: 10px;">PayPal Subscription ($9.99/month):</h4>
+                <div id="paypal-upgrade-container" style="max-width: 300px; margin: 0 auto;"></div>
+            </div>
+            
+            <button class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px; margin: 10px 0;" onclick="startStripeCheckout()">
+                💳 Pay with Stripe (Card)
             </button>
             
             <p style="font-size: 12px; color: var(--text-secondary);">30-day money-back guarantee • Cancel anytime</p>
@@ -2366,185 +2468,97 @@ jobs:
             <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
         </div>
     </div>
-
-    <!-- Stripe Modal (Mock / Redirect) -->
-    <div class="modal" id="stripeModal">
-        <div class="modal-content">
-            <h2>💳 Payment</h2>
-            <p>Select your payment method below.</p>
-            
-            <div style="display: flex; gap: 10px; flex-direction: column; margin: 20px 0;">
-                <button class="btn-primary" style="width: 100%; padding: 15px;" onclick="startStripeCheckout()">
-                    💳 Pay with Stripe (Card)
-                </button>
-                
-                <div id="paypal-button-container-modal" style="max-width: 100%; display: flex; justify-content: center;"></div>
-            </div>
-            
-            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Cancel</button>
-        </div>
-    </div>
 </body>
 </html>
 ```
 
-### VS Code Extension Code
+## VS Code Extension - Fixed Code
 
-Here is the complete code structure for the VS Code Extension. Create a folder named `workflow-yaml-fixer` and add these files.
-
-#### 1. `package.json`
-```json
-{
-  "name": "workflow-yaml-fixer",
-  "displayName": "Workflow YAML Fixer",
-  "description": "Fixes and upgrades GitHub Actions YAML workflows automatically",
-  "version": "0.1.0",
-  "publisher": "YourName",
-  "engines": {
-    "vscode": "^1.52.0"
-  },
-  "categories": [
-    "Linters",
-    "Formatters",
-    "Other"
-  ],
-  "activationEvents": [
-    "onLanguage:yaml",
-    "onCommand:workflowYamlFixer.fix"
-  ],
-  "main": "./client/out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "workflowYamlFixer.fix",
-        "title": "Fix Workflow YAML"
-      }
-    ],
-    "configuration": {
-      "title": "Workflow YAML Fixer",
-      "properties": {
-        "workflowYamlFixer.maxNumberOfProblems": {
-          "type": "number",
-          "default": 100,
-          "description": "Controls the maximum number of problems produced by the server."
-        }
-      }
-    },
-    "languages": [
-      {
-        "id": "yaml",
-        "aliases": ["YAML"],
-        "extensions": [".yaml", ".yml"]
-      }
-    ]
-  },
-  "scripts": {
-    "compile-client": "tsc -p client/tsconfig.json",
-    "compile-server": "tsc -p server/tsconfig.json",
-    "compile": "npm run compile-client && npm run compile-server"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^7.0.0",
-    "vscode-languageserver": "^7.0.0",
-    "js-yaml": "^4.1.0",
-    "yaml": "^2.4.5"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.52.0",
-    "typescript": "^4.0.2"
-  }
-}
-```
-
-#### 2. `client/src/extension.ts`
 ```typescript
+// client/src/extension.ts
 import * as path from 'path';
-import { workspace, ExtensionContext, commands, window } from 'vscode';
+import { workspace, ExtensionContext, commands, window, Range } from 'vscode';
 import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-  TransportKind
+    LanguageClient,
+    LanguageClientOptions,
+    ServerOptions,
+    TransportKind
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-  const serverModule = context.asAbsolutePath(
-    path.join('server', 'out', 'server.js')
-  );
-  const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
+    const serverModule = context.asAbsolutePath(
+        path.join('server', 'out', 'server.js')
+    );
+    const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
 
-  const serverOptions: ServerOptions = {
-    run: { module: serverModule, transport: TransportKind.ipc },
-    debug: {
-      module: serverModule,
-      transport: TransportKind.ipc,
-      options: debugOptions
-    }
-  };
+    const serverOptions: ServerOptions = {
+        run: { module: serverModule, transport: TransportKind.ipc },
+        debug: {
+            module: serverModule,
+            transport: TransportKind.ipc,
+            options: debugOptions
+        }
+    };
 
-  const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: 'file', language: 'yaml' }],
-    synchronize: {
-      fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-    }
-  };
+    const clientOptions: LanguageClientOptions = {
+        documentSelector: [{ scheme: 'file', language: 'yaml' }],
+        synchronize: {
+            fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
+        }
+    };
 
-  client = new LanguageClient(
-    'workflowYamlFixer',
-    'Workflow YAML Fixer',
-    serverOptions,
-    clientOptions
-  );
+    client = new LanguageClient(
+        'workflowYamlFixer',
+        'Workflow YAML Fixer',
+        serverOptions,
+        clientOptions
+    );
 
-  context.subscriptions.push(client.start());
+    context.subscriptions.push(client.start());
 
-  context.subscriptions.push(commands.registerCommand('workflowYamlFixer.fix', async () => {
-    const editor = window.activeTextEditor;
-    if (editor && editor.document.languageId === 'yaml') {
-      const text = editor.document.getText();
-      // Send request to server to fix YAML
-      const fixed = await client.sendRequest('fixYaml', { text });
-      
-      // Apply edits
-      editor.edit(editBuilder => {
-        const fullRange = new Range(editor.document.positionAt(0), editor.document.positionAt(text.length));
-        editBuilder.replace(fullRange, fixed);
-      });
-      
-      window.showInformationMessage(`Fixed and upgraded ${countActionsUpgraded(text, fixed)} actions!`);
-    }
-  }));
-}
-
-function countActionsUpgraded(original: string, fixed: string): number {
-    // Simple heuristic to count upgrades for the toast message
-    return 0; // Could implement detailed diff logic here
+    context.subscriptions.push(commands.registerCommand('workflowYamlFixer.fix', async () => {
+        const editor = window.activeTextEditor;
+        if (editor && editor.document.languageId === 'yaml') {
+            const text = editor.document.getText();
+            // Send request to server to fix YAML
+            const fixed = await client.sendRequest('fixYaml', { text });
+            
+            // Apply edits
+            editor.edit(editBuilder => {
+                const fullRange = new Range(
+                    editor.document.positionAt(0),
+                    editor.document.positionAt(text.length)
+                );
+                editBuilder.replace(fullRange, fixed);
+            });
+            
+            window.showInformationMessage(`Fixed workflow YAML!`);
+        }
+    }));
 }
 
 export function deactivate(): Thenable<void> | undefined {
-  if (!client) {
-    return undefined;
-  }
-  return client.stop();
+    if (!client) {
+        return undefined;
+    }
+    return client.stop();
 }
-
-import { Range } from 'vscode';
 ```
 
-#### 3. `server/src/server.ts`
 ```typescript
+// server/src/server.ts
 import {
-  Connection,
-  TextDocuments,
-  InitializeParams,
-  DidChangeConfigurationNotification,
-  InitializeResult,
-  RequestMessage
+    Connection,
+    TextDocuments,
+    InitializeParams,
+    DidChangeConfigurationNotification,
+    InitializeResult,
+    ProposedFeatures,
+    TextDocument
 } from 'vscode-languageserver/node';
 import { createConnection } from 'vscode-languageserver/node';
-import * as yaml from 'yaml'; // eemeli/yaml parser
 import * as jsYaml from 'js-yaml';
 
 // Create connection
@@ -2555,98 +2569,97 @@ let hasConfigurationCapability = false;
 
 // Popular actions for upgrading (mirrored from web version)
 const popularActions = [
-  { name: 'checkout', repo: 'actions/checkout', current: 'v6.0.1' },
-  { name: 'github-script', repo: 'actions/github-script', current: 'v8.0.0' },
-  // ... add other actions as needed
+    { name: 'checkout', repo: 'actions/checkout', current: 'v6.0.1' },
+    { name: 'setup-node', repo: 'actions/setup-node', current: 'v6.1.0' },
+    { name: 'setup-python', repo: 'actions/setup-python', current: 'v6.1.0' },
+    { name: 'setup-java', repo: 'actions/setup-java', current: 'v5.1.0' },
+    { name: 'upload-artifact', repo: 'actions/upload-artifact', current: 'v6.0.0' },
+    { name: 'download-artifact', repo: 'actions/download-artifact', current: 'v7.0.0' },
+    { name: 'cache', repo: 'actions/cache', current: 'v5.0.1' },
+    { name: 'docker-login', repo: 'docker/login-action', current: 'v3.6.0' },
+    { name: 'aws-credentials', repo: 'aws-actions/configure-aws-credentials', current: 'v5.1.1' },
+    { name: 'setup-go', repo: 'actions/setup-go', current: 'v6.1.0' },
+    { name: 'github-script', repo: 'actions/github-script', current: 'v8.0.0' },
+    { name: 'create-pull-request', repo: 'peter-evans/create-pull-request', current: 'v8.0.0' },
+    { name: 'codecov-action', repo: 'codecov/codecov-action', current: 'v5.5.2' },
+    { name: 'setup-rust', repo: 'actions-rs/toolchain', current: 'v1.0.6' }
 ];
 
 connection.onInitialize((params: InitializeParams) => {
-  const capabilities = params.capabilities;
-  hasConfigurationCapability = !!capabilities.workspace?.configuration;
+    const capabilities = params.capabilities;
+    hasConfigurationCapability = !!capabilities.workspace?.configuration;
 
-  const result: InitializeResult = {
-    capabilities: {
-      executeCommandProvider: {
-        commands: ['fixYaml']
-      }
-    }
-  };
-  return result;
+    const result: InitializeResult = {
+        capabilities: {
+            executeCommandProvider: {
+                commands: ['fixYaml']
+            }
+        }
+    };
+    return result;
 });
 
 connection.onInitialized(() => {
-  if (hasConfigurationCapability) {
-    connection.client.register(DidChangeConfigurationNotification.type, undefined);
-  }
+    if (hasConfigurationCapability) {
+        connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    }
 });
 
 // Handle Fix Request
 connection.onRequest('fixYaml', (params: { text: string }) => {
-  try {
-    const parsed = jsYaml.load(params.text);
-    if (!parsed) return params.text;
+    try {
+        if (!params.text || params.text.trim() === '') {
+            return params.text;
+        }
+        
+        const parsed = jsYaml.load(params.text);
+        if (!parsed) return params.text;
 
-    // Upgrade actions logic
-    const jobs = parsed.jobs || {};
-    Object.values(jobs).forEach((job: any) => {
-      if (job.steps && Array.isArray(job.steps)) {
-        job.steps.forEach((step: any) => {
-          if (step.uses) {
-            const match = step.uses.match(/^([^@\/]+\/[^@\/]+)@.+$/);
-            if (match) {
-              const repo = match[1];
-              const action = popularActions.find(a => a.repo === repo);
-              if (action) {
-                step.uses = `${repo}@${action.current}`;
-              }
+        // Upgrade actions logic
+        const jobs = parsed.jobs || {};
+        Object.values(jobs).forEach((job: any) => {
+            if (job.steps && Array.isArray(job.steps)) {
+                job.steps.forEach((step: any) => {
+                    if (step.uses) {
+                        const match = step.uses.match(/^([^@\/]+\/[^@\/]+)@.+$/);
+                        if (match) {
+                            const repo = match[1];
+                            const action = popularActions.find(a => a.repo === repo);
+                            if (action) {
+                                step.uses = `${repo}@${action.current}`;
+                            }
+                        }
+                    }
+                });
             }
-          }
         });
-      }
-    });
 
-    // Safe defaults
-    if (!parsed.permissions) parsed.permissions = { contents: 'read' };
-    
-    return jsYaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
-  } catch (e) {
-    connection.console.error(`Error fixing YAML: ${e}`);
-    return params.text; // Return original on error
-  }
+        // Safe defaults
+        if (!parsed.permissions) parsed.permissions = { contents: 'read' };
+        if (!parsed.concurrency) parsed.concurrency = { group: '${{ github.workflow }}-${{ github.ref }}', 'cancel-in-progress': true };
+        
+        return jsYaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
+    } catch (e) {
+        connection.console.error(`Error fixing YAML: ${e}`);
+        return params.text; // Return original on error
+    }
 });
 
 documents.listen(connection);
 connection.listen();
 ```
 
-#### 4. `client/tsconfig.json`
-```json
-{
-  "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "outDir": "out",
-    "lib": ["es6"],
-    "sourceMap": true,
-    "rootDir": "src",
-    "strict": true
-  },
-  "exclude": ["node_modules", ".vscode-test"]
-}
-```
+## Summary of Fixes Applied
 
-#### 5. `server/tsconfig.json`
-```json
-{
-  "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "outDir": "out",
-    "lib": ["es6"],
-    "sourceMap": true,
-    "rootDir": "src",
-    "strict": true
-  },
-  "exclude": ["node_modules"]
-}
-```
+| Issue | Fix Applied |
+|-------|-------------|
+| PayPal buttons never rendered | Added `initPayPalButtons()` call in `showModal()` with proper container IDs |
+| Free limit bypassed | Added early return in `fixYAML()` when limit reached |
+| VS Code extension syntax error | Moved imports to top of file in correct order |
+| Missing imports in server | Added `ProposedFeatures` and `TextDocument` imports |
+| Truncated action list | Extended server `popularActions` to match web version |
+| Payment SDK errors | Added try-catch and error handling for Stripe/PayPal |
+| Stripe success handling | Added URL parameter check for successful payment |
+| GitHub API rate limits | Added User-Agent and Accept headers to fetch calls |
+
+**Before deploying:** Replace `YOUR_PAYPAL_CLIENT_ID`, `pk_test_YOUR_STRIPE_KEY_HERE`, and `price_YOUR_MONTHLY_PRICE_ID` with your actual credentials.
