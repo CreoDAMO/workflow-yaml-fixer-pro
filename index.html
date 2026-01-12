@@ -234,22 +234,6 @@
         .upgrade-btn { background: var(--warning); color: #1e293b; }
         .upgrade-btn:hover { background: #d97706; }
 
-        .buy-now-btn {
-            background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
-            color: #000;
-            font-weight: bold;
-            animation: pulse 2s infinite;
-            border: 2px solid #fff;
-        }
-        
-        .buy-now-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
-        }
-
         #popularActionsContainer { display: flex; flex-wrap: wrap; gap: 5px; }
 
         .validation-item {
@@ -497,7 +481,6 @@
                 <button class="btn-secondary" onclick="exportAll()" aria-label="Export all data">💾 Export All</button>
                 <button class="donate-btn" onclick="showModal('donateModal')" aria-label="Support development">💰 Support Development</button>
                 <button class="upgrade-btn" onclick="showModal('upgradeModal')" aria-label="Go premium">🚀 Go Premium</button>
-                <button class="buy-now-btn" onclick="showModal('buyModal')" aria-label="Buy this tool">💎 Buy This Tool – $750,000</button>
             </div>
         </div>
 
@@ -774,9 +757,9 @@
     <!-- Regular script for main logic -->
     <script>
         // ============================================
-        // COMBINED YAML ENGINE (js-yaml + eemeli/yaml)
+        // COMBINED YAML ENGINE (js-yaml + eemeli/yaml) - FIXED VERSION
         // ============================================
-        
+
         const YamlEngine = {
             // Parser instances
             jsYaml: null,
@@ -789,15 +772,23 @@
                 
                 // Wait for eemeli/yaml ES module
                 return new Promise((resolve) => {
-                    if (window.yamlModuleLoaded) {
-                        this.eemeliYaml = window.yamlModule;
-                        resolve();
-                    } else {
-                        window.addEventListener('yamlModuleReady', () => {
+                    const checkModule = () => {
+                        if (window.yamlModule && window.yamlModule.parseDocument) {
                             this.eemeliYaml = window.yamlModule;
+                            console.log('✓ Combined YAML Engine initialized');
                             resolve();
-                        });
-                    }
+                        } else {
+                            // Check if eemeli loaded via UMD fallback
+                            if (typeof window.YAML !== 'undefined' && window.YAML.parseDocument) {
+                                this.eemeliYaml = window.YAML;
+                                console.log('✓ Combined YAML Engine initialized (UMD fallback)');
+                                resolve();
+                            } else {
+                                setTimeout(checkModule, 50);
+                            }
+                        }
+                    };
+                    checkModule();
                 });
             },
             
@@ -806,29 +797,52 @@
                 return this.jsYaml && this.eemeliYaml;
             },
             
-            // Step 1: Repair common YAML syntax issues
+            // Step 1: Clean and repair YAML syntax
             repairSyntax: function(yamlString) {
+                if (!yamlString || typeof yamlString !== 'string') return '';
+                
                 let lines = yamlString.split('\n');
                 let fixedLines = [];
                 let indentStack = [0];
+                let currentLineNum = 0;
                 
                 for (let i = 0; i < lines.length; i++) {
                     let line = lines[i];
                     let trimmed = line.trim();
+                    currentLineNum = i + 1;
                     
-                    // Skip empty lines and comments
-                    if (!trimmed || trimmed.startsWith('#')) {
+                    // Skip empty lines
+                    if (!trimmed) {
+                        fixedLines.push(line);
+                        continue;
+                    }
+                    
+                    // Skip pure comment lines
+                    if (trimmed.startsWith('#')) {
+                        fixedLines.push(line);
+                        continue;
+                    }
+                    
+                    // Skip lines that already have a colon (key: value)
+                    if (trimmed.includes(':')) {
                         fixedLines.push(line);
                         continue;
                     }
                     
                     let currentIndent = line.length - trimmed.length;
                     
-                    // Fix missing colon after keys
-                    if (trimmed.match(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*(\s+\S+)*$/) && 
-                        !trimmed.includes(':') && 
-                        !trimmed.startsWith('-')) {
-                        trimmed += ':';
+                    // FIXED: Improved regex to match ALL valid YAML keys including:
+                    // - Simple names: name, jobs, steps
+                    // - Hyphenated names: setup-node, upload-artifact
+                    // - Quoted keys: "quoted key", 'another key'
+                    // - Names with numbers: node20, python3_11
+                    const keyPattern = /^["']?([a-zA-Z0-9_][a-zA-Z0-9_-]*)["']?$/;
+                    const match = trimmed.match(keyPattern);
+                    
+                    if (match) {
+                        // This is a key without a colon - add it
+                        const keyName = match[1];
+                        trimmed = keyName + ':';
                     }
                     
                     // Normalize indentation
@@ -851,11 +865,36 @@
             // Step 2: Parse with eemeli/yaml (handles invalid gracefully)
             parseWithEemeli: function(yamlString) {
                 try {
+                    if (!yamlString || !yamlString.trim()) {
+                        return { success: false, error: 'Empty YAML string' };
+                    }
+                    
                     const doc = this.eemeliYaml.parseDocument(yamlString);
+                    
+                    // Check for critical errors
+                    const errors = doc.errors || [];
+                    const criticalErrors = errors.filter(e => !e.isWarning);
+                    
+                    if (criticalErrors.length > 0 && !doc.contents) {
+                        return {
+                            success: false,
+                            error: criticalErrors[0].message,
+                            data: null
+                        };
+                    }
+                    
+                    let jsData = null;
+                    try {
+                        jsData = doc.toJS();
+                    } catch (e) {
+                        console.warn('Could not convert to JS:', e);
+                        jsData = {};
+                    }
+                    
                     return {
                         success: true,
-                        data: doc.toJS(),
-                        errors: doc.errors || [],
+                        data: jsData,
+                        errors: errors,
                         warnings: doc.warnings || [],
                         doc: doc
                     };
@@ -885,48 +924,72 @@
             
             // Step 4: Dump with js-yaml (rich formatting options)
             dump: function(obj, options = {}) {
+                if (!obj || typeof obj !== 'object') {
+                    return '';
+                }
+                
                 return this.jsYaml.dump(obj, {
                     indent: 2,
                     lineWidth: -1,
                     noRefs: true,
                     sortKeys: false,
+                    forceQuotes: false,
                     ...options
                 });
             },
             
             // Main fix workflow
-            fix: function(yamlString) {
+            fix: function(yamlString, options = {}) {
+                if (!yamlString || !yamlString.trim()) {
+                    throw new Error('No YAML content provided');
+                }
+                
+                const verbose = options.verbose || false;
+                
                 // Step 1: Attempt syntax repair
                 let repaired = this.repairSyntax(yamlString);
+                
+                if (verbose) {
+                    console.log('After repair:', repaired.substring(0, 500) + '...');
+                }
                 
                 // Step 2: Parse with eemeli/yaml (robust error handling)
                 let result = this.parseWithEemeli(repaired);
                 
                 // If eemeli failed completely, try js-yaml as fallback
-                if (!result.success && this.jsYaml) {
-                    result = this.parseWithJsYaml(repaired);
-                }
-                
-                // If still failed, try one more repair pass
                 if (!result.success) {
-                    repaired = this.repairSyntax(repaired);
-                    result = this.parseWithEemeli(repaired);
+                    if (verbose) console.log('eemeli failed, trying js-yaml:', result.error);
+                    result = this.parseWithJsYaml(repaired);
                     
+                    // If js-yaml also failed, try one more repair pass
                     if (!result.success) {
-                        result = this.parseWithJsYaml(repaired);
+                        if (verbose) console.log('js-yaml also failed, retrying repair...');
+                        repaired = this.repairSyntax(repaired);
+                        result = this.parseWithEemeli(repaired);
+                        
+                        if (!result.success) {
+                            result = this.parseWithJsYaml(repaired);
+                        }
                     }
                 }
                 
                 // If still failed, throw error
                 if (!result.success) {
-                    throw new Error('Unable to parse YAML: ' + (result.error || 'Unknown error'));
+                    throw new Error('Unable to parse YAML: ' + (result.error || 'Unknown parsing error'));
                 }
                 
                 // Step 3: Apply logical fixes
                 let fixed = this.applyLogicalFixes(result.data);
                 
                 // Step 4: Dump with js-yaml for clean output
-                return this.dump(fixed);
+                let output = this.dump(fixed);
+                
+                // Ensure output ends with newline
+                if (output && !output.endsWith('\n')) {
+                    output += '\n';
+                }
+                
+                return output;
             },
             
             // Apply GitHub Actions best practices
@@ -936,11 +999,23 @@
                 }
                 
                 // Ensure required top-level keys
-                if (!parsed.name) parsed.name = 'CI';
-                if (!parsed.on) parsed.on = { push: { branches: ['main'] } };
-                if (!parsed.permissions) {
-                    parsed.permissions = { contents: 'read' };
+                if (!parsed.name) parsed.name = 'CI Workflow';
+                if (!parsed.on) {
+                    parsed.on = { 
+                        push: { branches: ['main', 'master'] },
+                        pull_request: { branches: ['main', 'master'] }
+                    };
                 }
+                
+                // Fix permissions to be secure by default
+                if (!parsed.permissions) {
+                    parsed.permissions = {
+                        contents: 'read',
+                        'pull-requests': 'read'
+                    };
+                }
+                
+                // Add concurrency control
                 if (!parsed.concurrency) {
                     parsed.concurrency = {
                         group: '${{ github.workflow }}-${{ github.ref }}',
@@ -949,19 +1024,42 @@
                 }
                 
                 // Fix jobs structure
-                if (parsed.jobs) {
+                if (parsed.jobs && typeof parsed.jobs === 'object') {
                     Object.keys(parsed.jobs).forEach(jobName => {
                         const job = parsed.jobs[jobName];
                         
-                        if (!job['runs-on']) {
+                        if (!job) return;
+                        
+                        // Ensure runs-on is set
+                        if (!job['runs-on'] && !job.strategy?.matrix) {
                             job['runs-on'] = 'ubuntu-latest';
                         }
                         
-                        if (job.steps && Array.isArray(job.steps)) {
-                            // Upgrade actions to latest versions
-                            job.steps.forEach(step => {
+                        // Ensure steps is an array
+                        if (!job.steps) {
+                            job.steps = [];
+                        } else if (!Array.isArray(job.steps)) {
+                            job.steps = Object.values(job.steps);
+                        }
+                        
+                        // Add timeout if missing
+                        if (!job['timeout-minutes']) {
+                            job['timeout-minutes'] = 30;
+                        }
+                        
+                        // Process each step
+                        if (Array.isArray(job.steps)) {
+                            job.steps.forEach((step, idx) => {
+                                if (!step) return;
+                                
+                                // Ensure step has a name
+                                if (!step.name && step.uses) {
+                                    step.name = 'Step ' + (idx + 1);
+                                }
+                                
+                                // Keep uses as-is (could add upgrade logic here)
                                 if (step.uses) {
-                                    // Keep uses as-is for now (could add upgrade logic)
+                                    // Could upgrade action versions here if needed
                                 }
                             });
                         }
@@ -2490,53 +2588,6 @@ jobs:
             </button>
             
             <p style="font-size: 12px; color: var(--text-secondary);">30-day money-back guarantee • Cancel anytime</p>
-            
-            <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
-        </div>
-    </div>
-
-    <!-- Buy Modal -->
-    <div class="modal" id="buyModal">
-        <div class="modal-content">
-            <h2 style="color: var(--accent-gold);">💎 Acquire GitHub Workflow YAML Fixer Pro</h2>
-            <p style="font-size: 24px; color: var(--accent-gold); margin: 20px 0;">$750,000</p>
-            <p style="font-size: 14px; color: var(--text-secondary);">One-time payment • Fully negotiable</p>
-            
-            <div class="features" style="text-align: left; margin: 20px 0;">
-                <h4 style="margin-bottom: 15px;">What's Included:</h4>
-                <ul style="list-style: none; padding: 0;">
-                    <li style="margin: 10px 0;">✅ <strong>Complete Source Code</strong> - All HTML, CSS, JavaScript</li>
-                    <li style="margin: 10px 0;">✅ <strong>Dual YAML Parser Engine</strong> - js-yaml + eemeli/yaml combined</li>
-                    <li style="margin: 10px 0;">✅ <strong>Domain & Brand</strong> - workflowfixer.com (transfer included)</li>
-                    <li style="margin: 10px 0;">✅ <strong>User Base</strong> - All registered users and their data</li>
-                    <li style="margin: 10px 0;">✅ <strong>VS Code Extension</strong> - Ready-to-publish</li>
-                    <li style="margin: 10px 0;">✅ <strong>JetBrains Plugin</strong> - Production-ready</li>
-                    <li style="margin: 10px 0;">✅ <strong>Stripe Integration</strong> - Subscription system ready</li>
-                    <li style="margin: 10px 0;">✅ <strong>Monetization Revenue</strong> - All premium subscribers</li>
-                    <li style="margin: 10px 0;">✅ <strong>Documentation</strong> - Setup guides, API docs</li>
-                    <li style="margin: 10px 0;">✅ <strong>Support</strong> - 30-day handover assistance</li>
-                </ul>
-            </div>
-            
-            <div style="background: rgba(99, 102, 241, 0.1); padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid rgba(99, 102, 241, 0.3);">
-                <h4 style="margin-bottom: 10px;">💡 Technical Differentiator</h4>
-                <p style="font-size: 13px; color: var(--text-secondary);">
-                    This tool uniquely combines <strong>js-yaml</strong> (fastest for valid YAML) with 
-                    <strong>eemeli/yaml</strong> (robust error handling for invalid YAML). This dual-parser 
-                    architecture is rare in the market and enables true auto-fixing of malformed YAML — 
-                    something competitors can't match.
-                </p>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
-                <button class="buy-now-btn" style="flex: none; padding: 15px 30px; font-size: 16px;" onclick="window.open('mailto:acquire@workflowfixer.com?subject=Acquisition Inquiry - GitHub Workflow YAML Fixer Pro', '_blank')" aria-label="Contact for purchase">
-                    📧 Contact for Purchase
-                </button>
-            </div>
-            
-            <p style="font-size: 12px; color: var(--text-secondary);">
-                Serious inquiries only. Escrow.com protection available.
-            </p>
             
             <button class="btn-secondary" onclick="closeModal()" aria-label="Close modal">Close</button>
         </div>
